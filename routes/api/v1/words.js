@@ -15,7 +15,7 @@ router.get("/", (req, res) => {
     });
 });
 
-// GET api/v1/words
+// GET api/v1/words/:id
 // get word by id
 // @access = public
 router.get("/:id", (req, res) => {
