@@ -1,0 +1,48 @@
+[
+  { "word_name": "gold", "definition": "element" },
+  { "word_name": "autumn", "definition": "season" },
+  { "word_name": "bear", "definition": "large mammal of family Ursidae" },
+  { "word_name": "copper", "definition": "chemical element Cu" },
+  { "word_name": "silver", "definition": "metal" },
+  { "word_name": "iron", "definition": "chemical element Fe" },
+  { "word_name": "beer", "definition": "alcoholic drink made of malt" },
+  { "word_name": "apple", "definition": "fruit" },
+  { "word_name": "tin", "definition": "element" },
+  { "word_name": "egg", "definition": "body housing an embryo" },
+  {
+    "word_name": "blood",
+    "definition": "vital liquid flowing in animal bodies"
+  },
+  {
+    "word_name": "cloud",
+    "definition": "visible mass of water droplets suspended in the air"
+  },
+  { "word_name": "day", "definition": "period of 24 hours" },
+  { "word_name": "dog", "definition": "animal" },
+  { "word_name": "ear", "definition": "organ of hearing" },
+  { "word_name": "eye", "definition": "organ" },
+  { "word_name": "fish", "definition": "vertebrate animal" },
+  { "word_name": "fox", "definition": "''Vulpes''" },
+  { "word_name": "frost", "definition": "cover of minute ice crystals" },
+  {
+    "word_name": "goose",
+    "definition": "a grazing waterfowl of the family Anatidae"
+  },
+  { "word_name": "hand", "definition": "part of the fore limb" },
+  { "word_name": "honey", "definition": "sweet substance produced by bees" },
+  {
+    "word_name": "horse",
+    "definition": "members of the species ''Equus ferus''"
+  },
+  { "word_name": "ice", "definition": "water in frozen form" },
+  { "word_name": "milk", "definition": "liquid" },
+  {
+    "word_name": "moon",
+    "definition": "largest natural satellite of planet Earth"
+  },
+  { "word_name": "mouse", "definition": "rodent of the genus ''Mus''" },
+  {
+    "word_name": "winter",
+    "definition": "fourth season, marked by short days and lowest temperatures"
+  }
+]
