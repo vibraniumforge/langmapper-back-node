@@ -109,7 +109,7 @@ router.patch("/:id", (req, res) => {
 });
 
 // DELETE api/v1/languages
-// delete languages
+// delete a language
 // @access = public
 router.delete("/:id", (req, res) => {
   Language.findById(req.params.id)
