@@ -4,7 +4,9 @@
   "description": "backend for langmapper in node.js",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "",
+    "start": "node server.js",
+    "server": "nodemon server.js"
   },
   "repository": {
     "type": "git",
@@ -15,5 +17,15 @@
   "bugs": {
     "url": "https://github.com/vibraniumforge/langmapper-back-node/issues"
   },
-  "homepage": "https://github.com/vibraniumforge/langmapper-back-node#readme"
+  "homepage": "https://github.com/vibraniumforge/langmapper-back-node#readme",
+  "dependencies": {
+    "colors": "^1.4.0",
+    "concurrently": "^5.2.0",
+    "express": "^4.17.1",
+    "mongoose": "^5.9.27",
+    "morgan": "^1.10.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.4"
+  }
 }
