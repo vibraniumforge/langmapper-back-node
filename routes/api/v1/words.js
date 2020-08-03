@@ -105,22 +105,20 @@ router.delete("/:id", (req, res) => {
 
 // ----------------------------------------------------
 
-// GET api/v1/words/word_names
+// GET api/v1/words/get/word_names
 // get all word names
 // @access = public
-router.get("/word_names", (req, res) => {
-  console.log("word_names fires");
+router.get("/get/word_names", (req, res) => {
   Word.find()
     .sort({ word_name: 1 })
     .then((words) =>
       words.map((word) => {
-        // console.log(word);
-        return { id: word.word_id, name: word.word_name };
+        return { id: word._id, word_name: word.word_name };
       })
     )
     .then((words) =>
       res.json({
-        message: `Words found`,
+        message: "All Word names successfully returned.",
         success: true,
         data: words,
       })
@@ -131,16 +129,16 @@ router.get("/word_names", (req, res) => {
     });
 });
 
-// GET api/v1/words/:id
+// GET api/v1/words/search/definition/:word
 // get all one word's definintion
 // @access = public
-router.get("/definition/:word", (req, res) => {
+router.get("/search/definition/:word", (req, res) => {
   Word.find({ word_name: req.params.word })
     .then((word) =>
       res.json({
-        message: `Word definition found`,
+        message: "Word definition returned.",
         success: true,
-        data: word[0].definition,
+        data: [word[0].definition],
       })
     )
     .catch((err) => {
@@ -149,14 +147,14 @@ router.get("/definition/:word", (req, res) => {
     });
 });
 
-// GET api/v1/words/words_count
+// GET api/v1/words/get/words_count
 // get count of words
 // @access = public
-router.get("/words_count", (req, res) => {
-  Word.count()
+router.get("/get/words_count", (req, res) => {
+  Word.countDocuments()
     .then((count) =>
       res.json({
-        message: `Words count found`,
+        message: "Word count found",
         success: true,
         data: count,
       })
