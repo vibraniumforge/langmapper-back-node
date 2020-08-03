@@ -18,7 +18,7 @@ router.get("/", (req, res) => {
 // GET api/v1/words/:id
 // get word by id
 // @access = public
-router.get("/:id", (req, res) => {
+router.get("/:id([0-9a-fA-F]{24})", (req, res) => {
   Word.findById(req.params.id)
     .then((word) => res.json(word))
     .catch((err) => {
@@ -101,6 +101,70 @@ router.delete("/:id", (req, res) => {
       res.json({ message: `Language ${req.params.id} deleted.`, success: true })
     )
     .catch((err) => res.status(404).json({ success: false, error: err }));
+});
+
+// ----------------------------------------------------
+
+// GET api/v1/words/word_names
+// get all word names
+// @access = public
+router.get("/word_names", (req, res) => {
+  console.log("word_names fires");
+  Word.find()
+    .sort({ word_name: 1 })
+    .then((words) =>
+      words.map((word) => {
+        // console.log(word);
+        return { id: word.word_id, name: word.word_name };
+      })
+    )
+    .then((words) =>
+      res.json({
+        message: `Words found`,
+        success: true,
+        data: words,
+      })
+    )
+    .catch((err) => {
+      console.log(err);
+      res.status(404).json({ success: false, error: err });
+    });
+});
+
+// GET api/v1/words/:id
+// get all one word's definintion
+// @access = public
+router.get("/definition/:word", (req, res) => {
+  Word.find({ word_name: req.params.word })
+    .then((word) =>
+      res.json({
+        message: `Word definition found`,
+        success: true,
+        data: word[0].definition,
+      })
+    )
+    .catch((err) => {
+      console.log(err);
+      res.status(404).json({ success: false, error: err });
+    });
+});
+
+// GET api/v1/words/words_count
+// get count of words
+// @access = public
+router.get("/words_count", (req, res) => {
+  Word.count()
+    .then((count) =>
+      res.json({
+        message: `Words count found`,
+        success: true,
+        data: count,
+      })
+    )
+    .catch((err) => {
+      console.log(err);
+      res.status(404).json({ success: false, error: err });
+    });
 });
 
 module.exports = router;
