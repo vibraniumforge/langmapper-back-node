@@ -129,16 +129,16 @@ router.get("/get/word_names", (req, res) => {
     });
 });
 
-// GET api/v1/words/search/definition/:word
-// get all one word's definintion
+// GET api/v1/words/get/words_count
+// get count of words
 // @access = public
-router.get("/search/definition/:word", (req, res) => {
-  Word.find({ word_name: req.params.word })
-    .then((word) =>
+router.get("/get/words_count", (req, res) => {
+  Word.countDocuments()
+    .then((count) =>
       res.json({
-        message: "Word definition returned.",
+        message: "Words count successfully returned.",
         success: true,
-        data: [word[0].definition],
+        data: count,
       })
     )
     .catch((err) => {
@@ -147,16 +147,16 @@ router.get("/search/definition/:word", (req, res) => {
     });
 });
 
-// GET api/v1/words/get/words_count
-// get count of words
+// GET api/v1/words/search/definition/:word
+// get one word's definintion
 // @access = public
-router.get("/get/words_count", (req, res) => {
-  Word.countDocuments()
-    .then((count) =>
+router.get("/search/definition/:word", (req, res) => {
+  Word.find({ word_name: req.params.word })
+    .then((word) =>
       res.json({
-        message: "Word count found",
+        message: "Word definition successfully returned.",
         success: true,
-        data: count,
+        data: [word[0].definition],
       })
     )
     .catch((err) => {
