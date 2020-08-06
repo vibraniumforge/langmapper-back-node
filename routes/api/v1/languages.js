@@ -124,4 +124,168 @@ router.delete("/:id", (req, res) => {
     });
 });
 
+// ----------------------------------------------------
+
+// DONE
+// GET api/v1/languages/get/macrofamily_names
+// get all macrofamily names
+// @access = public
+router.get("/get/macrofamily_names", (req, res) => {
+  Language.distinct("macrofamily")
+    // .sort({ word_name: 1 })
+    .then((macrofamiles) =>
+      res.json({
+        message: "All Macrofamily names successfully returned.",
+        success: true,
+        data: macrofamiles,
+      })
+    )
+    .catch((err) => {
+      console.log(err);
+      res.status(404).json({ success: false, error: err });
+    });
+});
+
+// DONE
+// GET api/v1/languages/get/alphabet_names
+// get all alphabet names
+// @access = public
+router.get("/get/alphabet_names", (req, res) => {
+  //   Language.aggregate([
+  //     { $group: { _id: "$alphabet" } },
+  //     { $sort: { alphabet: 1 } },
+  //   ])
+  Language.distinct("alphabet")
+    // .sort({ alphabet: 1 })
+    .then((alphabetNames) =>
+      res.json({
+        message: "All Alphabet names successfully returned.",
+        success: true,
+        data: alphabetNames,
+      })
+    )
+    .catch((err) => {
+      console.log(err);
+      res.status(404).json({ success: false, error: err });
+    });
+});
+
+// DONE
+// GET api/v1/languages/get/area_names
+// get all language area names
+// @access = public
+router.get("/get/area_names", (req, res) => {
+  // SQL AREL equivalent
+  //   Language.select(:area1, :area2, :area3).distinct.pluck(:area1, :area2, :area3).flatten.uniq.reject{|x|x.blank?}.sort
+
+  //   This works, but returns wrong format
+  //   Language.aggregate([
+  //     {
+  //       $project: {
+  //         _id: 0,
+  //         area1: {
+  //           $cond: {
+  //             if: { $eq: ["", "$area1"] },
+  //             then: "$REMOVE",
+  //             else: "$area1",
+  //           },
+  //         },
+  //         area2: {
+  //           $cond: {
+  //             if: { $eq: ["", "$area2"] },
+  //             then: "$REMOVE",
+  //             else: "$area2",
+  //           },
+  //         },
+  //         area3: {
+  //           $cond: {
+  //             if: { $eq: ["", "$area3"] },
+  //             then: "$REMOVE",
+  //             else: "$area3",
+  //           },
+  //         },
+  //       },
+  //     },
+  //   ])
+
+  let allAreas = [];
+  Language.distinct("area1").then((areas) =>
+    areas.forEach((area) => {
+      if (area && !allAreas.includes(area)) {
+        allAreas.push(area);
+      }
+    })
+  );
+  Language.distinct("area2").then((areas) =>
+    areas.forEach((area) => {
+      if (area && !allAreas.includes(area)) {
+        allAreas.push(area);
+      }
+    })
+  );
+  Language.distinct("area3")
+    .then((areas) =>
+      areas.forEach((area) => {
+        if (area && !allAreas.includes(area)) {
+          allAreas.push(area);
+        }
+      })
+    )
+    .then(() => {
+      res.json({
+        message: "All Language area names successfully returned.",
+        success: true,
+        data: allAreas.sort(),
+      });
+    })
+    .catch((err) => {
+      console.log(err);
+      res.status(404).json({ success: false, error: err });
+    });
+});
+
+// DONE
+// GET api/v1/languages/search/area/:area
+// search languages by area
+// @access = public
+router.get("/search/area/:area", (req, res) => {
+  Language.find({
+    $or: [
+      { area1: req.params.area },
+      { area2: req.params.area },
+      { area3: req.params.area },
+    ],
+  })
+    .then((languages) =>
+      res.json({
+        message: `All Languages in ${req.params.area} successfully returned.`,
+        success: true,
+        data: languages,
+      })
+    )
+    .catch((err) => {
+      console.log(err);
+      res.status(404).json({ success: false, error: err });
+    });
+});
+
+// DONE
+// GET api/v1/languages/get/languages_count
+// get count of languages
+// @access = public
+router.get("/get/languages_count", (req, res) => {
+  Language.countDocuments()
+    .then((count) =>
+      res.json({
+        message: "Languages count successfully returned.",
+        success: true,
+        data: count,
+      })
+    )
+    .catch((err) => {
+      console.log(err);
+      res.status(404).json({ success: false, error: err });
+    });
+});
+
 module.exports = router;
