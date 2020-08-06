@@ -30,9 +30,11 @@ const TranslationSchema = new Schema(
     translation: {
       type: String,
       required: false,
+      index: true,
     },
   },
   { timestamps: true }
 );
+TranslationSchema.index({ etymology: "text" }, { language_override: "dummy" });
 
 module.exports = Translation = mongoose.model("translation", TranslationSchema);
