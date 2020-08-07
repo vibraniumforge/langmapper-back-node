@@ -3,9 +3,7 @@ const router = express.Router();
 const Translation = require("../../../models/Translation.js");
 const fs = require("fs");
 const cheerio = require("cheerio");
-// import europeCopyMap from "./my_europe_template.svg";
-// const euroCopyMap = require("../../../images/my_europe_template_copy.svg");
-// const europeCopyMap = require("./my_europe_template_copy.svg");
+const path = require("path");
 
 // GET api/v1/translations
 // get all translations
@@ -372,7 +370,7 @@ router.get("/get/seeds", (req, res) => {
 
 // find_all_translations_by_area_europe_map
 // GET api/v1/translations/search/area_europe_map/:area/:word
-// search translation by area
+// search translation by area from the europe map
 // @access = public
 router.get("/search/area_europe_map/:area/:word", (req, res) => {
   //prettier-ignore
@@ -387,7 +385,6 @@ router.get("/search/area_europe_map/:area/:word", (req, res) => {
       },
     },
     { $unwind: "$language" },
-    { $match: { "language.abbreviation": { $in: myEuropeSvg } } },
     {
       $lookup: {
         from: "words",
@@ -397,6 +394,14 @@ router.get("/search/area_europe_map/:area/:word", (req, res) => {
       },
     },
     { $unwind: "$word" },
+    {
+      $match: {
+        $and: [
+          { "language.abbreviation": { $in: myEuropeSvg } },
+          { word_name: req.params.word },
+        ],
+      },
+    },
     {
       $project: {
         _id: 1,
@@ -447,9 +452,12 @@ router.get("/search/area_europe_map/:area/:word", (req, res) => {
 // search translation by area and create map
 // @access = public
 router.get("/search/all_translations_by_area_img/:area/:word", (req, res) => {
+  console.log("find_all_translations_by_area_img FIRES");
+  console.log("req.params.word=", req.params.word);
   //prettier-ignore
   const myEuropeSvg = ["ab", "ar", "az", "be", "bg", "br", "ca", "co", "cs", "cy", "da", "de", "el", "en", "es", "et", "eu", "fi", "fo", "fr", "fy", "ga", "gag", "gd", "gl", "hu", "hy", "is", "it", "ka", "kk", "krl", "lb", "lij", "lt", "lv", "mk", "mt", "nap", "nl", "no", "oc", "os", "pl", "pms", "pt", "rm", "ro", "ru", "sc", "scn", "sco", "se", "sh", "sh", "sh", "sk", "sl", "sq", "sv", "tk", "tt", "uk", "vnc", "xal"];
-  let search = Translation.aggregate([
+
+  Translation.aggregate([
     {
       $lookup: {
         from: "languages",
@@ -459,7 +467,7 @@ router.get("/search/all_translations_by_area_img/:area/:word", (req, res) => {
       },
     },
     { $unwind: "$language" },
-    { $match: { "language.abbreviation": { $in: myEuropeSvg } } },
+
     {
       $lookup: {
         from: "words",
@@ -469,6 +477,14 @@ router.get("/search/all_translations_by_area_img/:area/:word", (req, res) => {
       },
     },
     { $unwind: "$word" },
+    {
+      $match: {
+        $and: [
+          { "language.abbreviation": { $in: myEuropeSvg } },
+          { word_name: req.params.word },
+        ],
+      },
+    },
     {
       $project: {
         _id: 1,
@@ -501,67 +517,6 @@ router.get("/search/all_translations_by_area_img/:area/:word", (req, res) => {
     },
   ])
     .then((search) => {
-      //   let doc = fs.readFileSync(
-      //     "../../../images/my_europe_template.svg",
-      //     function (err, data) {
-      //       console.log(err);
-      //     }
-      //   );
-      //   let doc = fs.readFile(
-      //     __dirname + "/my_europe_template_copy.svg",
-      //     function (err, data) {
-      //       console.log("err=", err);
-      //       console.log("data=", data);
-      //     }
-      //   );
-      //   console.log("doc=", doc);
-
-      //   let readFileCallback = function (err) {
-      //     if (err) throw err;
-      //     console.log("The file has been saved!");
-      //   };
-
-      //   let fileName = fs.writeFile("my_europe_template_copy.svg");
-      //   console.log("fileName=", fileName);
-      //   let fileName = fs.writeFileSync(
-      //     __dirname + "/my_europe_template_copy.svg"
-      //   );
-
-      //   let copyFile = __dirname + "/my_europe_template_copy.svg";
-      //   let openCallback = function (err, file) {
-      //     if (err) throw err;
-      //     console.log("Saved!");
-      //   };
-      //   fs.open(copyFile, "w", openCallback);
-
-      //   console.log(resultsArray[0]);
-      //   console.log("resultsArray.length=", resultsArray.length);
-
-      //   let filename = fs.readFile("my_europe_template_copy.svg", (err, data) => {
-      //     if (err) throw err;
-      //     console.log("data=", data);
-      //     return;
-      //   });
-      //   console.log("filename=", filename);
-      //   fs.writeFile("/my_europe_template_copy.svg", data, (err, data) => {
-      //     if (err) throw err;
-      //     console.log("data=", data);
-      //     return;
-      //   });
-
-      //   const $ = cheerio.load("./my_europe_template_copy.svg");
-      //   const names = $("#text4194");
-      //   console.log("names=", names);
-
-      //   console.log("filename=", filename);
-      //   let data = filename.toString();
-      //   console.log(data);
-
-      //   for (let language of resultsArray) {
-      // console.log(language);
-      // counter++;
-      // }
-
       const searchResults = [...search];
       let resultArray = [];
       let currentLanguages = [];
@@ -569,8 +524,7 @@ router.get("/search/all_translations_by_area_img/:area/:word", (req, res) => {
       let counter = 0;
 
       fs.readFile(
-        __dirname + "/my_europe_template.svg",
-        "utf8",
+        path.join(__dirname, "../../../images/my_europe_template.svg"),
         (err, data) => {
           if (err) throw err;
           let info = data.toString();
@@ -585,8 +539,6 @@ router.get("/search/all_translations_by_area_img/:area/:word", (req, res) => {
               mapLanguages.push(lang.split("$")[1]);
             }
           });
-          //   console.log(mapLanguages);
-          //   console.log(searchResults);
           for (let result of searchResults) {
             if (!mapLanguages.includes(result.language.abbreviation)) {
               continue;
@@ -600,21 +552,31 @@ router.get("/search/all_translations_by_area_img/:area/:word", (req, res) => {
             });
             currentLanguages.push(result.language.abbreviation);
           }
-          console.log("mapLanguages=", mapLanguages);
-          console.log("searchResults[0]=", searchResults[0]);
-          console.log("resultArray[0]=", resultArray[0]);
-          // console.log("langs=", langs);
+          //   console.log("mapLanguages=", mapLanguages);
+          //   console.log("searchResults[0]=", searchResults[0]);
+          //   console.log("resultArray[0]=", resultArray[0]);
+
+          let unusedMapLanguages = [];
+          mapLanguages.forEach((lang) => {
+            if (!currentLanguages.includes(lang)) {
+              unusedMapLanguages.push(lang);
+            }
+          });
+          //   console.log("unusedMapLanguages=", unusedMapLanguages);
+          unusedMapLanguages.forEach((lang) => {
+            info = info.replace("$" + lang, "");
+          });
           langs.each(function (i, el) {
             let lang = $(el).text().split("$")[1];
-            console.log("lang=", lang);
+            // console.log("lang=", lang);
             if (currentLanguages.includes(lang)) {
               const index = currentLanguages.indexOf(lang);
-              console.log("index=", index);
-              console.log("currentLanguages[index]=", currentLanguages[index]);
-              console.log(
-                'resultArray[index]["translation"]=',
-                resultArray[index]["translation"]
-              );
+              //   console.log("index=", index);
+              //   console.log("currentLanguages[index]=", currentLanguages[index]);
+              //   console.log(
+              //     'resultArray[index]["translation"]=',
+              //     resultArray[index]["translation"]
+              //   );
               // console.log(index);
               // console.log(resultArray[index]["translation"]);
               // $(el).text(resultArray[index]["translation"]);
@@ -622,122 +584,39 @@ router.get("/search/all_translations_by_area_img/:area/:word", (req, res) => {
                 "$" + lang,
                 resultArray[index]["translation"]
               );
-              // console.log($(el).text());
             }
-            console.log("===========");
           });
-          fs.writeFile("my_europe_template_copy.svg", info, function (
-            err,
-            result
-          ) {
-            if (err) throw err;
-          });
+          console.log("writeFile fires");
+          fs.writeFileSync(
+            path.join(__dirname, "../../../images/my_europe_template_copy.svg"),
+            info,
+            function (err, result) {
+              if (err) throw err;
+              console.log("typeof result=", typeof result);
+            }
+          );
           console.log("file saved.");
         }
       );
-      // console.log(data);
     })
-
-    // filename = filename.replace(
-    //   "$" + language["abbreviation"],
-    //   language["translation"]
-    // );
-
-    //   fs.writeFile("my_europe_template_copy.svg", data, function (err) {
-    //     if (err) {
-    //       throw err;
-    //     }
-    //     console.log("The file was saved!");
-    //   });
-
-    //   for (let i = 0; i < searchResults.length; i++) {
-    //     let result = searchResults[i];
-    //     if (!mapLanguages.includes(result.abbreviation)) {
-    //       continue;
-    //     }
-    //     resultArray.push(romanizationHelper(Object.from(result[0])));
-    //     currentLanguages.push(result.abbreviation);
-    //   }
-
-    //   let map = fs.open("../images.my_europe_template.svg", "w");
-    //   let myMap = fs.open(map, "w");
-
-    //   for (let i = 0; i < resultArray.length; i++) {
-    //     let lang = "$" + resultArray[i][0];
-    //     myMap.writeFile(map.replace("$" + lang, resultArray[i][2]));
-    //   }
-
-    //   let unusedMapLanguages = [];
-    //   mapLanguages.forEach((language) => {
-    //     if (!currentLanguages.includes(language)) {
-    //       unusedMapLanguages.push(language);
-    //     }
-    //   });
-    //   for (let unusedLanguage of unusedMapLanguages) {
-    //     let unusedLanguageOnSVG = "$" + unusedLanguage;
-    //     myMap.replace(unusedLanguageOnSVG, "");
-    //   }
-    // })
-    //   Translation.aggregate([
-    //     {
-    //       $lookup: {
-    //         from: "languages",
-    //         localField: "language",
-    //         foreignField: "name",
-    //         as: "language",
-    //       },
-    //     },
-    //     { $unwind: "$language" },
-    //     { $match: { "language.abbreviation": { $in: myEuropeSvg } } },
-    //     {
-    //       $lookup: {
-    //         from: "words",
-    //         localField: "word_name",
-    //         foreignField: "word_name",
-    //         as: "word",
-    //       },
-    //     },
-    //     { $unwind: "$word" },
-    //     {
-    //       $project: {
-    //         _id: 1,
-    //         etymology: 1,
-    //         gender: 1,
-    //         link: 1,
-    //         romanization: 1,
-    //         translation: 1,
-    //         language: 1,
-    //         word_name: 1,
-    //         // area1: 1,
-    //         // area2: 1,
-    //         // area3: 1,
-    //       },
-    //     },
-    //     {
-    //       $project: {
-    //         _id: 1,
-    //         etymology: 1,
-    //         gender: 1,
-    //         link: 1,
-    //         romanization: 1,
-    //         translation: 1,
-    //         language: 1,
-    //         word_name: 1,
-    //         // area1: 1,
-    //         // area2: 1,
-    //         // area3: 1,
-    //       },
-    //     },
-    //   ])
-    .then((translations) =>
-      res.json({
-        message: `All Translations of ${req.params.word} in ${req.params.area} successfully returned.`,
-        success: true,
-        // data: europeCopyMap,
-      })
-    )
+    .then(() => {
+      //   res.json({
+      //     message: `All Translations of ${req.params.word} in ${req.params.area} successfully returned.`,
+      //     success: true,
+      //   });
+      res.setHeader("Content-Type", "image/svg+xml");
+      res.sendFile(
+        path.join(__dirname, "../../../images/my_europe_template_copy.svg")
+      );
+    })
+    .then(() => {
+      console.log(
+        "path=",
+        path.join(__dirname, "../../../images/my_europe_template_copy.svg")
+      );
+    })
     .catch((err) => {
-      console.log(err);
+      console.log("err=", err);
       res.status(404).json({ success: false, error: err });
     });
 });
