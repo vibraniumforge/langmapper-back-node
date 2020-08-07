@@ -1,3 +1,9 @@
 node_modules
 .env
 .DS_Store
+
+/routes/api/v1/my_europe_template.svg
+/routes/api/v1/my_europe_template_copy.svg
+
+/images/my_europe_template_copy.svg
+/images/my_europe_template.svg
