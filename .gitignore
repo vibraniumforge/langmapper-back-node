@@ -7,3 +7,5 @@ node_modules
 
 /images/my_europe_template_copy.svg
 /images/my_europe_template.svg
+
+/seeds/translations.json
