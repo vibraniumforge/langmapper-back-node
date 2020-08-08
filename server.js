@@ -6,10 +6,41 @@ const app = express();
 const cors = require("cors");
 require("dotenv").config();
 
+const allowedOrigins = [
+  "http://localhost:3000",
+  "http://https://arcane-wave-94268.herokuapp.com",
+];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // allow requests with no origin
+      // (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.indexOf(origin) === -1) {
+        var msg =
+          "The CORS policy for this site does not " +
+          "allow access from the specified Origin.";
+        return callback(new Error(msg), false);
+      }
+      return callback(null, true);
+    },
+
+    exposedHeaders: ["Content-Length", "X-Foo", "X-Bar"],
+
+    credentials: true,
+  })
+);
+
 app.use(express.json());
+// app.use(cors);
 // const db = require("./config/keys").mongoURI;
 
-const uri = process.env.MONGO_URI;
+const uri =
+  process.env.NODE_ENV === "development"
+    ? process.env.DEVELOPMENT_URI
+    : process.env.PRODUCTION_URI;
+
 const PORT = process.env.PORT || 3002;
 
 mongoose
