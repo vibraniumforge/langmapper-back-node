@@ -9,3 +9,5 @@ node_modules
 /images/my_europe_template.svg
 
 /seeds/translations.json
+/seeds/languages.json
+/seeds/words.json
