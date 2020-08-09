@@ -8,7 +8,7 @@ require("dotenv").config();
 
 const allowedOrigins = [
   "http://localhost:3000",
-  "http://https://arcane-wave-94268.herokuapp.com",
+  "https://arcane-wave-94268.herokuapp.com",
 ];
 
 app.use(
@@ -25,8 +25,6 @@ app.use(
       }
       return callback(null, true);
     },
-
-    exposedHeaders: ["Content-Length", "X-Foo", "X-Bar"],
 
     credentials: true,
   })
