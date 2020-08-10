@@ -126,6 +126,7 @@ router.delete("/:id", (req, res) => {
 // search translations by word
 // @access = public
 router.get("/search/word/:word", (req, res) => {
+  // other data structure style
   //   Translation.aggregate([
   //     {
   //       $lookup: {
@@ -138,12 +139,13 @@ router.get("/search/word/:word", (req, res) => {
   //     { $unwind: "$word_name" },
   //     { $match: { "language.word_name": req.params.word } },
   //     { $project: { gender: 1 } },
-  //   ])
+  //   ]);
   Translation.find({ word_name: req.params.word })
     .then((words) =>
       res.json({
         message: `Translations of ${req.params.word} successfully returned.`,
         success: true,
+        count: words.length,
         data: words,
       })
     )
@@ -175,6 +177,7 @@ router.get("/search/gender/:word", (req, res) => {
       res.json({
         message: `Genders of ${req.params.word} successfully returned.`,
         success: true,
+        count: words.length,
         data: words,
       })
     )
@@ -186,20 +189,26 @@ router.get("/search/gender/:word", (req, res) => {
 
 // DONE
 // find_etymology_containing
-// / GET api/v1/languages/search/etymology/:word
-// search translations by word/etymology
+// GET api/v1/languages/search/etymology/:word
+// search translations by word containing an etymology
 // @access = public
 router.get("/search/etymology/:word", (req, res) => {
+  // mogoose below
   //   Translation.index({ etymology: "text" });
-  //   Translation.ensureIndexes({ etymology: 1 });
+  // native mongo below
+  //   Translation.createIndex({ etymology: 1 });
   Translation.find({
-    $text: { $search: req.params.word, $caseSensitive: true },
+    $text: {
+      $search: req.params.word,
+      $caseSensitive: true,
+      $diacriticSensitive: false,
+    },
   })
     .then((translations) =>
       res.json({
         message: `Etymologies containing ${req.params.word} successfully returned.`,
         success: true,
-        count: translations.count,
+        count: translations.length,
         data: translations,
       })
     )
@@ -231,6 +240,7 @@ router.get("/search/macrofamily/:macrofamily", (req, res) => {
       res.json({
         message: `All Translations by macrofamily ${req.params.macrofamily} successfully returned.`,
         success: true,
+        count: languages.length,
         data: languages,
       })
     )
@@ -240,6 +250,7 @@ router.get("/search/macrofamily/:macrofamily", (req, res) => {
     });
 });
 
+// DONE
 // find_all_translations_by_language
 // GET api/v1/translations/search/language/:language/
 // search translations by language
@@ -261,60 +272,8 @@ router.get("/search/language/:language", (req, res) => {
       res.json({
         message: `All Translations in ${req.params.language} successfully returned.`,
         success: true,
+        count: languages.length,
         data: languages,
-      })
-    )
-    .catch((err) => {
-      console.log(err);
-      res.status(404).json({ success: false, error: err });
-    });
-});
-
-// find_all_translations_by_area
-// GET api/v1/translations/search/area/:area/:word
-// search translation by area
-// @access = public
-router.get("/search/area/:area/:word", (req, res) => {
-  Translation.aggregate([
-    {
-      $lookup: {
-        from: "languages",
-        localField: "language",
-        foreignField: "name",
-        as: "language",
-      },
-    },
-    { $unwind: "$language" },
-    {
-      $lookup: {
-        from: "words",
-        localField: "word_name",
-        foreignField: "word_name",
-        as: "word",
-      },
-    },
-    { $unwind: "$word" },
-    {
-      $project: {
-        _id: 1,
-        etymology: 1,
-        gender: 1,
-        link: 1,
-        romanization: 1,
-        translation: 1,
-        language: 1,
-        word_name: 1,
-        // area1: 1,
-        // area2: 1,
-        // area3: 1,
-      },
-    },
-  ])
-    .then((translations) =>
-      res.json({
-        message: `All Translations of ${req.params.word} in ${req.params.area} successfully returned.`,
-        success: true,
-        data: translations,
       })
     )
     .catch((err) => {
@@ -369,9 +328,79 @@ router.get("/get/seeds", (req, res) => {
     });
 });
 
+// DONE
+// find_all_translations_by_area
+// GET api/v1/translations/search/area/:area/:word
+// search translation by area
+// @access = public
+router.get("/search/area/:area/:word", (req, res) => {
+  Translation.aggregate([
+    {
+      $lookup: {
+        from: "languages",
+        localField: "language",
+        foreignField: "name",
+        as: "language",
+      },
+    },
+    { $unwind: "$language" },
+    {
+      $lookup: {
+        from: "words",
+        localField: "word_name",
+        foreignField: "word_name",
+        as: "word",
+      },
+    },
+    { $unwind: "$word" },
+    {
+      $match: {
+        $and: [
+          { word_name: req.params.word },
+          {
+            $or: [
+              { "language.area1": req.params.area },
+              { "language.area2": req.params.area },
+              { "language.area3": req.params.area },
+            ],
+          },
+        ],
+      },
+    },
+    {
+      $project: {
+        _id: 1,
+        etymology: 1,
+        gender: 1,
+        link: 1,
+        romanization: 1,
+        translation: 1,
+        language: 1,
+        word_name: 1,
+        // area1: 1,
+        // area2: 1,
+        // area3: 1,
+      },
+    },
+  ])
+    .then((translations) =>
+      res.json({
+        message: `All Translations of ${req.params.word} in ${req.params.area} successfully returned.`,
+        success: true,
+        count: translations.length,
+        data: translations,
+      })
+    )
+    .catch((err) => {
+      console.log(err);
+      res.status(404).json({ success: false, error: err });
+    });
+});
+
+// DONE
 // find_all_translations_by_area_europe_map
 // GET api/v1/translations/search/area_europe_map/:area/:word
-// search translation by area from the europe map
+// search translation by area FROM THE EUROPE MAP ONLY
 // @access = public
 router.get("/search/area_europe_map/:area/:word", (req, res) => {
   //prettier-ignore
@@ -418,21 +447,6 @@ router.get("/search/area_europe_map/:area/:word", (req, res) => {
         // area3: 1,
       },
     },
-    {
-      $project: {
-        _id: 1,
-        etymology: 1,
-        gender: 1,
-        link: 1,
-        romanization: 1,
-        translation: 1,
-        language: 1,
-        word_name: 1,
-        // area1: 1,
-        // area2: 1,
-        // area3: 1,
-      },
-    },
   ])
     .then((translations) =>
       res.json({
@@ -448,14 +462,14 @@ router.get("/search/area_europe_map/:area/:word", (req, res) => {
     });
 });
 
+// MAPPERS
+
+// DONE
 // find_all_translations_by_area_img
 // GET api/v1/translations/search/all_translations_by_area_img/:area/:word
 // search translation by area and from the europe map by TRANSLATION
 // @access = public
 router.get("/search/all_translations_by_area_img/:area/:word", (req, res) => {
-  //prettier-ignore
-  const myEuropeSvg = ["ab", "ar", "az", "be", "bg", "br", "ca", "co", "cs", "cy", "da", "de", "el", "en", "es", "et", "eu", "fi", "fo", "fr", "fy", "ga", "gag", "gd", "gl", "hu", "hy", "is", "it", "ka", "kk", "krl", "lb", "lij", "lt", "lv", "mk", "mt", "nap", "nl", "no", "oc", "os", "pl", "pms", "pt", "rm", "ro", "ru", "sc", "scn", "sco", "se", "sh", "sh", "sh", "sk", "sl", "sq", "sv", "tk", "tt", "uk", "vnc", "xal"];
-
   Translation.aggregate([
     {
       $lookup: {
@@ -479,21 +493,15 @@ router.get("/search/all_translations_by_area_img/:area/:word", (req, res) => {
     {
       $match: {
         $and: [
-          { "language.abbreviation": { $in: myEuropeSvg } },
           { word_name: req.params.word },
+          {
+            $or: [
+              { "language.area1": req.params.area },
+              { "language.area2": req.params.area },
+              { "language.area3": req.params.area },
+            ],
+          },
         ],
-      },
-    },
-    {
-      $project: {
-        _id: 1,
-        etymology: 1,
-        gender: 1,
-        link: 1,
-        romanization: 1,
-        translation: 1,
-        language: 1,
-        word_name: 1,
       },
     },
     {
@@ -535,31 +543,28 @@ router.get("/search/all_translations_by_area_img/:area/:word", (req, res) => {
             if (!mapLanguages.includes(result.language.abbreviation)) {
               continue;
             }
-
             resultArray.push(romanizationHelper(result));
             currentLanguages.push(result.language.abbreviation);
           }
 
           let unusedMapLanguages = [];
-          mapLanguages.forEach((lang) => {
-            if (!currentLanguages.includes(lang)) {
-              unusedMapLanguages.push(lang);
+          mapLanguages.forEach((mapLang) => {
+            if (!currentLanguages.includes(mapLang)) {
+              unusedMapLanguages.push(mapLang);
             }
           });
 
-          unusedMapLanguages.forEach((lang) => {
-            info = info.replace("$" + lang, "");
+          unusedMapLanguages.forEach((unusedLang) => {
+            info = info.replace("$" + unusedLang, "");
           });
-          langs.each(function (i, el) {
-            let lang = $(el).text().split("$")[1];
-            if (currentLanguages.includes(lang)) {
-              const index = currentLanguages.indexOf(lang);
-              info = info.replace(
-                "$" + lang,
-                resultArray[index]["translation"]
-              );
-            }
+
+          resultArray.forEach((language) => {
+            info = info.replace(
+              "$" + language["abbreviation"],
+              language["translation"]
+            );
           });
+
           console.log("writeFile fires");
           fs.writeFileSync(
             path.join(__dirname, "../../../images/my_europe_template_copy.svg"),
@@ -579,17 +584,12 @@ router.get("/search/all_translations_by_area_img/:area/:word", (req, res) => {
         path.join(__dirname, "../../../images/my_europe_template_copy.svg")
       );
     })
-    // .then(() => {
-    //   console.log(
-    //     "path=",
-    //     path.join(__dirname, "../../../images/my_europe_template_copy.svg")
-    //   );
-    // })
     .catch((err) => {
       console.log("err=", err);
       res.status(404).json({ success: false, error: err });
     });
 });
+// 145 lines v1
 
 // find_all_genders_by_area_img
 // GET api/v1/translations/search/all_genders_by_area_img/:area/:word
@@ -597,6 +597,7 @@ router.get("/search/all_translations_by_area_img/:area/:word", (req, res) => {
 // @access = public
 router.get("/search/all_genders_by_area_img/:area/:word", (req, res) => {
   console.log("find_all_genders_by_area_img FIRES");
+  console.log("req.params.area=", req.params.area);
   console.log("req.params.word=", req.params.word);
   //prettier-ignore
   const myEuropeSvg = ["ab", "ar", "az", "be", "bg", "br", "ca", "co", "cs", "cy", "da", "de", "el", "en", "es", "et", "eu", "fi", "fo", "fr", "fy", "ga", "gag", "gd", "gl", "hu", "hy", "is", "it", "ka", "kk", "krl", "lb", "lij", "lt", "lv", "mk", "mt", "nap", "nl", "no", "oc", "os", "pl", "pms", "pt", "rm", "ro", "ru", "sc", "scn", "sco", "se", "sh", "sh", "sh", "sk", "sl", "sq", "sv", "tk", "tt", "uk", "vnc", "xal"];
@@ -665,7 +666,6 @@ router.get("/search/all_genders_by_area_img/:area/:word", (req, res) => {
         ["uk", "c1ff00"],
         ["vnc", "f28d3c"],
         ["xal", "d34d5f"],
-
       ]
 
   Translation.aggregate([
@@ -678,7 +678,6 @@ router.get("/search/all_genders_by_area_img/:area/:word", (req, res) => {
       },
     },
     { $unwind: "$language" },
-
     {
       $lookup: {
         from: "words",
@@ -708,58 +707,43 @@ router.get("/search/all_genders_by_area_img/:area/:word", (req, res) => {
         word_name: 1,
       },
     },
-    {
-      $project: {
-        _id: 1,
-        etymology: 1,
-        gender: 1,
-        link: 1,
-        romanization: 1,
-        translation: 1,
-        language: 1,
-        word_name: 1,
-      },
-    },
   ])
     .then((search) => {
       const searchResults = [...search];
-      //   the languages on the default map
+      // the languages on the default map
       let languagesArray = Combo.map((item) => item[0]);
 
-      //   the corresponding colors
+      // the corresponding colors
       let colorCodesArray = Combo.map((item) => item[1]);
 
-      //   the results of transforming the data
+      // the results of transforming the data
       let resultArray = [];
 
-      //   the current langauges in the results
+      // the current langauges in the results
       let currentLanguages = [];
 
-      //   the current languages on the map.
+      // the current languages on the map.
       let mapLanguages = [];
 
       fs.readFile(
         path.join(__dirname, "../../../images/my_europe_template.svg"),
         (err, data) => {
           if (err) throw err;
-          //   use cheerio to get all the $??? off the svg map
+          // use cheerio to get all the $??? off the svg map
           let info = data.toString();
           const $ = cheerio.load(info, {
             normalizeWhitespace: true,
             xmlMode: true,
           });
-          let langs = $("tspan");
-          langs.each(function (i, el) {
+          let langsParsed = $("tspan");
+          langsParsed.each(function (i, el) {
             let lang = $(el).text();
             if (lang) {
               mapLanguages.push(lang.split("$")[1]);
             }
           });
-          //   console.log("ml=", mapLanguages);
 
-          //   skip over languages that are results, but not on the map
-          //   console.log("sr=", searchResults[0]);
-          //   console.log("ml=", mapLanguages);
+          // skip over languages that are results, but not on the map
           for (let result of searchResults) {
             if (!mapLanguages.includes(result.language.abbreviation)) {
               continue;
@@ -771,62 +755,46 @@ router.get("/search/all_genders_by_area_img/:area/:word", (req, res) => {
             }
 
             // handle romanization
-            // add roman helper later
-            // result_array << romanization_helper(result)[0].to_h
-            thisResult = romanizationHelper(result);
-            // console.log("thisResult=", thisResult);
-            thisGender = result.gender ? result.gender : null;
+            let thisResult = romanizationHelper(result);
+
+            let thisGender = result.gender ? result.gender : null;
             thisResult["gender"] = thisGender;
-            // console.log("thisResult=", thisResult);
             resultArray.push(thisResult);
             currentLanguages.push(result.language.abbreviation);
           }
-          //   console.log("rA=", resultArray);
 
-          //   get the unused langs off the map. We are going to blank them out.
+          // get the unused langs from the map. We are going to blank them out.
           let unusedMapLanguages = [];
-          mapLanguages.forEach((lang) => {
-            if (!currentLanguages.includes(lang)) {
-              unusedMapLanguages.push(lang);
+          mapLanguages.forEach((mapLang) => {
+            if (!currentLanguages.includes(mapLang)) {
+              unusedMapLanguages.push(mapLang);
             }
           });
 
-          //   console.log(resultArray[0]);
-          //   console.log(
-          //     "2=",
-          //     resultArray.filter((item) => item.abbreviation === "it")
-          //   );
-
-          const italianGender = resultArray.filter(
+          // get the italian and french gender. to be the base for deleting later
+          const italianIndex = resultArray.findIndex(
             (item) => item.abbreviation === "it"
-          )[0]["gender"];
-          const frenchGender = resultArray.filter(
+          );
+          const frenchIndex = resultArray.findIndex(
             (item) => item["abbreviation"] === "fr"
-          )[0]["gender"];
+          );
+          const italianGender =
+            italianIndex > -1 ? resultArray[italianIndex]["gender"] : null;
+          const frenchGender =
+            frenchIndex > -1 ? resultArray[frenchIndex]["gender"] : null;
 
-          //   console.log("italianGender=", italianGender);
-          //   console.log("frenchGender=", frenchGender);
-
-          //   remove $___ text and decolor. Regional langs match French/Italian
+          // remove $___ text and decolor.
+          // Regional langs match French/Italian
+          // other langs are white
           unusedMapLanguages.forEach((unusedLang) => {
             const colorFromMap =
               colorCodesArray[languagesArray.indexOf(unusedLang)];
-            // console.log("unusedLang=", unusedLang);
-            // console.log("colorFromMap=", colorFromMap);
             const replaceColor = "#" + colorFromMap;
             const newRegex = new RegExp(replaceColor, "g");
-            console.log("newRegex=", newRegex);
-            // const index = languagesArray.findIndex(
-            //   (result) => result.abbreviation === unusedLang
-            // );
             if (
               ["pms", "lij", "vnc", "nap", "scn", "sc"].includes(unusedLang) &&
               italianGender
             ) {
-              //   info = info.replace(
-              //     "#" + colorFromMap,
-              //     "#" + genderColorFinder(italianGender)
-              //   );
               info = info.replace(
                 newRegex,
                 "#" + genderColorFinder(italianGender)
@@ -835,68 +803,51 @@ router.get("/search/all_genders_by_area_img/:area/:word", (req, res) => {
               ["oc", "co", "br"].includes(unusedLang) &&
               frenchGender
             ) {
-              //   info = info.replace(
-              //     "#" + colorFromMap,
-              //     "#" + genderColorFinder(frenchGender)
-              //   );
               info = info.replace(
                 newRegex,
                 "#" + genderColorFinder(frenchGender)
               );
             } else {
               info = info.replace(newRegex, "#" + "ffffff");
-              //   info = info.replace("#" + colorFromMap, "#" + "ffffff");
             }
             info = info.replace("$" + unusedLang, "");
-            // console.log("===============================");
           });
 
-          //   console.log(resultArray);
-          //   Change "$__" to result
-          langs.each(function (i, el) {
-            let lang = $(el).text().split("$")[1];
-            if (currentLanguages.includes(lang)) {
-              const index = resultArray.findIndex(
-                (result) => result.abbreviation === lang
-              );
-
-              //   console.log("languagesArray", languagesArray);
-              //   console.log("colorCodesArray", colorCodesArray);
-              //   console.log(
-              //     "languagesArray.findIndex(lang)",
-              //     languagesArray.findIndex(lang)
-              //   );
-              //   console.log("lang=", lang);
-              const colorFromMap =
-                colorCodesArray[languagesArray.indexOf(lang)];
-
-              //   console.log("index=", index);
-              //   console.log(
-              //     "resultArray[index][translation]=",
-              //     resultArray[index]["translation"]
-              //   );
-              //   console.log("cfm=", colorFromMap);
-              //   console.log(
-              //     "genderColorFinder=",
-              //     genderColorFinder(resultArray[index]["gender"])
-              //   );
-              //   genderColorFinder(resultArray[index]["gender"])
-              //   console.log("===============================");
-              resultArray[index]["translation"];
-              info = info.replace(
-                "$" + lang,
-                resultArray[index]["translation"]
-              );
-              const replaceColor = "#" + colorFromMap;
-              const newRegex = new RegExp(replaceColor, "g");
-              //   console.log("newRegex=", newRegex);
-              info = info.replace(
-                newRegex,
-                "#" + genderColorFinder(resultArray[index]["gender"])
-              );
-            }
+          // Change "$__" to result
+          resultArray.forEach((result) => {
+            info = info.replace(
+              "$" + result["abbreviation"],
+              result["translation"]
+            );
+            const existingColor =
+              colorCodesArray[languagesArray.indexOf(result["abbreviation"])];
+            const replaceColor = "#" + existingColor;
+            const newRegex = new RegExp(replaceColor, "g");
+            info = info.replace(
+              newRegex,
+              "#" + genderColorFinder(resultArray[index]["gender"])
+            );
           });
-          //   console.log("writeFile fires");
+          //   langsParsed.each(function (i, el) {
+          //     let lang = $(el).text().split("$")[1];
+          //     if (currentLanguages.includes(lang)) {
+          //       const index = resultArray.findIndex(
+          //         (result) => result.abbreviation === lang
+          //       );
+          //       const colorFromMap =
+          //         colorCodesArray[languagesArray.indexOf(lang)];
+          //       info = info.replace(
+          //         "$" + lang,
+          //         resultArray[index]["translation"]
+          //       );
+          //       const replaceColor = "#" + colorFromMap;
+          //       const newRegex = new RegExp(replaceColor, "g");
+          //       info = info.replace(
+          //         newRegex,
+          //         "#" + genderColorFinder(resultArray[index]["gender"])
+          //       );
+          //     }
+          //   });
           fs.writeFileSync(
             path.join(__dirname, "../../../images/my_europe_template_copy.svg"),
             info,
@@ -915,19 +866,12 @@ router.get("/search/all_genders_by_area_img/:area/:word", (req, res) => {
         path.join(__dirname, "../../../images/my_europe_template_copy.svg")
       );
     })
-    // .then(() => {
-    //   console.log(
-    //     "path=",
-    //     path.join(__dirname, "../../../images/my_europe_template_copy.svg")
-    //   );
-    // })
     .catch((err) => {
       console.log("err=", err);
       res.status(404).json({ success: false, error: err });
     });
 });
-
-// 334 lines
+// 334 lines v1
 
 // find_all_etymologies_by_area_img
 // GET api/v1/translations/search/all_etymologies_by_area_img/:area/:word
@@ -938,7 +882,7 @@ router.get("/search/all_etymologies_by_area_img/:area/:word", (req, res) => {
   console.log("req.params.area=", req.params.area);
   console.log("req.params.word=", req.params.word);
   //prettier-ignore
-  const myEuropeSvg = ["ab", "ar", "az", "be", "bg", "br", "ca", "co", "cs", "cy", "da", "de", "el", "en", "es", "et", "eu", "fi", "fo", "fr", "fy", "ga", "gag", "gd", "gl", "hu", "hy", "is", "it", "ka", "kk", "krl", "lb", "lij", "lt", "lv", "mk", "mt", "nap", "nl", "no", "oc", "os", "pl", "pms", "pt", "rm", "ro", "ru", "sc", "scn", "sco", "se", "sh", "sh", "sh", "sk", "sl", "sq", "sv", "tk", "tt", "uk", "vnc", "xal"];
+  const myEuropeSvg = ["ab", "ar", "az", "be", "bg", "br", "ca", "co", "cs", "cy", "da", "de", "el", "en", "es", "et", "eu", "fi", "fo", "fr", "fy", "ga", "gag", "gd", "gl", "hu", "hy", "is", "it", "ka", "kk", "krl", "lb", "lij", "lt", "lv", "mk", "mt", "nap", "nl", "no", "oc", "os", "pl", "pms", "pt", "rm", "ro", "ru", "sc", "scn", "sco", "se", "sh", "sk", "sl", "sq", "sv", "tk", "tt", "uk", "vnc", "xal"];
   //prettier-ignore
   const Combo = [
           ["ab", "168d4f"],
@@ -1004,7 +948,6 @@ router.get("/search/all_etymologies_by_area_img/:area/:word", (req, res) => {
           ["uk", "c1ff00"],
           ["vnc", "f28d3c"],
           ["xal", "d34d5f"],
-  
         ]
 
   Translation.aggregate([
@@ -1017,7 +960,6 @@ router.get("/search/all_etymologies_by_area_img/:area/:word", (req, res) => {
       },
     },
     { $unwind: "$language" },
-
     {
       $lookup: {
         from: "words",
@@ -1033,18 +975,6 @@ router.get("/search/all_etymologies_by_area_img/:area/:word", (req, res) => {
           { "language.abbreviation": { $in: myEuropeSvg } },
           { word_name: req.params.word },
         ],
-      },
-    },
-    {
-      $project: {
-        _id: 1,
-        etymology: 1,
-        gender: 1,
-        link: 1,
-        romanization: 1,
-        translation: 1,
-        language: 1,
-        word_name: 1,
       },
     },
     {
@@ -1099,13 +1029,14 @@ router.get("/search/all_etymologies_by_area_img/:area/:word", (req, res) => {
               mapLanguages.push(lang.split("$")[1]);
             }
           });
-          //   console.log("ml=", mapLanguages);
+          //   console.log("mapLanguages=", mapLanguages);
 
+          // Match logic:
           // get a result
           // check if it is on the map
           // check if it has an etymology
           // current_etymology_array - split the etymology by sentence, remove anything after first sentence
-          // split first sentence on commas.
+          // split first sentence on commas and semicolobs.
           // remove words. check this clean info for matches
           // get the families list. Match current_etymology_array[index] and family
           // if no matching_family, use the result.family
@@ -1113,10 +1044,6 @@ router.get("/search/all_etymologies_by_area_img/:area/:word", (req, res) => {
           // get the index_in_ety_array of the matching etymology from etymology_array
           // build the etymology array
           // build the result array
-
-          //   skip over languages that are results, but not on the map
-          //   console.log("sr[0]=", searchResults[0]);
-          //   console.log("ml=", mapLanguages);
 
           //prettier-ignore
           const removeWords = ["ultimately", "derived", "borrowed", "shortened", "by", "metathesis", "both", "all", "the", "voiced", "verner", "alternant", "classical", "with", "change", "of", "ending", "itself", "probably", "later", "vulgar", "a", "modification", "root", "or"]
@@ -1126,6 +1053,7 @@ router.get("/search/all_etymologies_by_area_img/:area/:word", (req, res) => {
           for (let result of searchResults) {
             console.log("result.l.abbreviation=", result.language.abbreviation);
 
+            // skip results NOT on  the current map
             if (!mapLanguages.includes(result.language.abbreviation)) {
               continue;
             }
@@ -1135,20 +1063,21 @@ router.get("/search/all_etymologies_by_area_img/:area/:word", (req, res) => {
               continue;
             }
 
+            // create a clean array from the current etymology
             let currentEtymologyArray = result.etymology
               .replace(/\s\(.*?\)/g, "")
               .replace(/\s\[.*?\]/g, "")
               .split(".")[0]
-              //   .split(/[,\s ;\s]/);
-              .split(", ");
-            //   .split("; ");
+              .split(/[,\s][;\s]/);
 
+            // variables to get the matching info
             let matchingFamily = null;
             let matchingEtymology = null;
             let matched = false;
 
-            //   Account for "from Vulgar Latin "xe", from Latin "x" confusion.
-            //   Remove Vulgar Latin if this is true.
+            // Prefer to match "Latin" instead of "Vulgar Latin"
+            // Account for "from Vulgar Latin "xe", from Latin "x" confusion.
+            // Remove Vulgar Latin if this is true.
             const numLatins = currentEtymologyArray.filter((phrase) =>
               phrase.includes("Latin")
             ).length;
@@ -1156,52 +1085,49 @@ router.get("/search/all_etymologies_by_area_img/:area/:word", (req, res) => {
               phrase.includes("Vulgar Latin")
             );
 
-            // console.log("numLatins=", numLatins);
-            // console.log("vulgarLatinIndex=", vulgarLatinIndex);
-
+            // remove "Vulgar Latin" if it exists and there is a Latin.
             if (numLatins > 1 && vulgarLatinIndex > -1) {
               currentEtymologyArray.splice(vulgarLatinIndex, 1);
             }
 
             let cleanEtymology = "";
-            // console.log("currentEtymologyArray=", currentEtymologyArray);
+
+            // loop over the currentEtymologyArray and match
             currentEtymologyArray.forEach((etymology) => {
               let cleanEtymology1 = etymology.split(" ");
-              //   console.log("cleanEtymology1=", cleanEtymology1);
               let cleanEtymology2 = cleanEtymology1.filter((word) => {
                 return !removeWords.includes(word.toLowerCase());
               });
-              //   console.log("cleanEtymology2=", cleanEtymology2);
               cleanEtymology = cleanEtymology2.join(" ").trim();
 
               console.log("currentEtymologyArray=", currentEtymologyArray);
               console.log("cleanEtymology=", cleanEtymology);
 
-              // INSERT while(!matched){} here.
-              // The forEach keeps going after a match
-              familiesList.forEach((family) => {
+              // loop over the families to try to match
+              for (let i = 0; i < familiesList.length; i++) {
+                let family = familiesList[i];
                 console.log("family=", family);
                 console.log("matched=", matched);
-                if (["tk"].includes(result.language.abbreviation)) {
-                  console.log("FIRES");
-                }
                 if (
-                  !matched &&
-                  (cleanEtymology.includes(`From ${family}`) ||
-                    cleanEtymology.trim().includes(`from ${family}`))
+                  cleanEtymology.includes(`From ${family}`) ||
+                  cleanEtymology.includes(`from ${family}`)
                 ) {
-                  console.log("MATCH");
-                  // console.log("matched=", matched);
                   matchingFamily = family;
                   matchingEtymology =
                     cleanEtymology.charAt(0).toUpperCase() +
                     cleanEtymology.slice(1);
                   matched = true;
+                  console.log("MATCH");
+                  console.log("matched=", matched);
                   console.log("matchingFamily=", matchingFamily);
                   console.log("matchingEtymology=", matchingEtymology);
                   console.log("\n");
+                  break;
                 }
-              });
+                if (matched) {
+                  break;
+                }
+              }
             });
 
             if (!matchingFamily) {
@@ -1216,18 +1142,6 @@ router.get("/search/all_etymologies_by_area_img/:area/:word", (req, res) => {
             const indexInEtymologyArray = etymologyArray.findIndex((item) => {
               return item && item["etymology"].includes(matchingEtymology);
             });
-            // console.log("indexInEtymologyArray=", indexInEtymologyArray);
-
-            // console.log(
-            //   "1=",
-            //   colorCodesArray[
-            //     languagesArray.indexOf(result["language"]["abbreviation"])
-            //   ]
-            // );
-            // console.log("2rla=", result["language"]["abbreviation"]);
-            // console.log("3result[language]=", result["language"]);
-            // console.log("4result=", result);
-            // console.log("5", languagesArray.indexOf(result["abbreviation"]));
 
             if (!result.etymology) {
               let editedResult = romanizationHelper(result);
@@ -1244,16 +1158,6 @@ router.get("/search/all_etymologies_by_area_img/:area/:word", (req, res) => {
                     languagesArray.indexOf(result["language"]["abbreviation"])
                   ];
               }
-              //   console.log(
-              //     "1=",
-              //     colorCodesArray[
-              //       languagesArray.indexOf(result["language"]["abbreviation"])
-              //     ]
-              //   );
-              //   console.log("2rla=", result["language"]["abbreviation"]);
-              //   console.log("3result[language]=", result["language"]);
-              //   console.log("4result=", result);
-              //   console.log("5", languagesArray.indexOf(result["abbreviation"]));
 
               etymologyArray.push({
                 etymology: matchingEtymology,
@@ -1280,27 +1184,7 @@ router.get("/search/all_etymologies_by_area_img/:area/:word", (req, res) => {
               currentLanguages.push(result.language.abbreviation);
               // do not increment the counter
             }
-
-            //   thisResult = romanizationHelper(result);
-            //   // console.log("thisResult=", thisResult);
-            //   thisGender = result.gender ? result.gender : null;
-            //   thisResult["gender"] = thisGender;
-            //   // console.log("thisResult=", thisResult);
-            //   resultArray.push(thisResult);
-            //   currentLanguages.push(result.language.abbreviation);
-            console.log("===========================");
           }
-          //   console.log("rA=", resultArray);
-
-          //   console.log(resultArray[0]);
-          //   console.log(
-          //     "2=",
-          //     resultArray.filter((item) => item.abbreviation === "it")
-          //   );
-
-          //   console.log("1269 resultArray=", resultArray);
-
-          //   console.log("1286 resultArray=", resultArray);
 
           const italianIndex = resultArray.findIndex((item) => {
             return item.abbreviation === "it";
@@ -1332,18 +1216,12 @@ router.get("/search/all_etymologies_by_area_img/:area/:word", (req, res) => {
             }
           });
 
-          //   remove $___ text and decolor. Regional langs match French/Italian
+          // remove $___ text and decolor. Regional langs match French/Italian
           unusedMapLanguages.forEach((unusedLang) => {
             const colorFromMap =
               colorCodesArray[languagesArray.indexOf(unusedLang)];
-            // console.log("unusedLang=", unusedLang);
-            // console.log("colorFromMap=", colorFromMap);
             const replaceColor = "#" + colorFromMap;
             const newRegex = new RegExp(replaceColor, "g");
-            // console.log("newRegex=", newRegex);
-            const index = languagesArray.findIndex(
-              (result) => result === unusedLang
-            );
             if (
               ["pms", "lij", "vnc", "nap", "scn", "sc"].includes(unusedLang) &&
               italianColor
@@ -1357,78 +1235,41 @@ router.get("/search/all_etymologies_by_area_img/:area/:word", (req, res) => {
               info = info.replace(newRegex, "#" + "ffffff");
             }
             info = info.replace("$" + unusedLang, "");
-            // console.log("===============================");
           });
 
-          //   console.log(resultArray);
           //   Change "$__" to result
-          //   console.log("langs=", langs.length);
-          //   console.log("langs[0]=", langs[0]);
-          //   console.log("currentLanguages=", currentLanguages);
-          langs.each(function (i, el) {
-            let lang = $(el).text();
-            // console.log("lang1=", lang);
-            if (lang) {
-              lang = lang.split("$")[1];
-            }
-            // console.log("lang=", lang);
-            // console.log("resultArray=", resultArray);
-            if (currentLanguages.includes(lang)) {
-              //   console.log(
-              //     "currentLanguages.includes(lang)=",
-              //     currentLanguages.includes(lang)
-              //   );
-              const index = resultArray.findIndex((item) => {
-                return item.abbreviation === lang;
-              });
-              //   console.log("index=", index);
-
-              //   console.log("languagesArray", languagesArray);
-              //   console.log("colorCodesArray", colorCodesArray);
-              //   console.log(
-              //     "languagesArray.findIndex(lang)",
-              //     languagesArray.findIndex(lang)
-              //   );
-
-              const colorFromMap =
-                colorCodesArray[languagesArray.indexOf(lang)];
-
-              //   console.log(
-              //     "resultArray[index][translation]=",
-              //     resultArray[index]["translation"]
-              //   );
-              //   console.log("cfm=", colorFromMap);
-
-              //   console.log("===============================");
-
-              info = info.replace(
-                "$" + lang,
-                resultArray[index]["translation"]
-              );
-              const replaceColor = "#" + colorFromMap;
-              const newRegex = new RegExp(replaceColor, "g");
-              //   console.log("newRegex=", newRegex);
-              info = info.replace(newRegex, "#" + resultArray[index]["color"]);
-            }
+          resultArray.forEach((result) => {
+            info = info.replace(
+              "$" + result["abbreviation"],
+              result["translation"]
+            );
+            const existingColor =
+              colorCodesArray[languagesArray.indexOf(result["abbreviation"])];
+            const replaceColor = "#" + existingColor;
+            const newRegex = new RegExp(replaceColor, "g");
+            info = info.replace(newRegex, "#" + result["color"]);
           });
-          console.log("etymologyArray=", etymologyArray);
           console.log("\n");
-          console.log(`${mapLanguages.length} languages on the map`);
           console.log(
-            `${searchResults.length} matching languages in the DB for this word: #{word} in #{area}`
+            `${searchResults.length} matching languages in the DB for the word: ${req.params.word} in: ${req.params.area}`
           );
+          console.log(`${mapLanguages.length} languages on the map`);
           console.log(`${unusedMapLanguages.length} unused languages`);
+          console.log(unusedMapLanguages.sort());
           console.log(`${currentLanguages.length} languages displayed`);
           console.log(`${etymologyArray.length} <== unique etymologies`);
-          console.log("myEuropeSvg=", myEuropeSvg);
-          console.log("mapLanguages=", mapLanguages.sort());
+          //   console.log("myEuropeSvg=", myEuropeSvg);
+          //   console.log("mapLanguages=", mapLanguages.sort());
+          //   console.log(
+          //     "mapLanguages.length===myEuropeSvg.length",
+          //     mapLanguages.length === myEuropeSvg.length
+          //   );
           console.log(
             `${
               myEuropeSvg.length - mapLanguages.length
             } languages missing between the two arrays`
           );
           console.log("\n");
-          //   console.log("writeFile fires");
           fs.writeFileSync(
             path.join(__dirname, "../../../images/my_europe_template_copy.svg"),
             info,
@@ -1448,17 +1289,12 @@ router.get("/search/all_etymologies_by_area_img/:area/:word", (req, res) => {
         path.join(__dirname, "../../../images/my_europe_template_copy.svg")
       );
     })
-    // .then(() => {
-    //   console.log(
-    //     "path=",
-    //     path.join(__dirname, "../../../images/my_europe_template_copy.svg")
-    //   );
-    // })
     .catch((err) => {
       console.log("err=", err);
       res.status(404).json({ success: false, error: err });
     });
 });
+// 529 lines v1
 
 //  Appends romanization if not the same as translation
 //  example [nl, water], ["uk", "мідь - midʹ"]
@@ -1504,7 +1340,7 @@ function genderColorFinder(gender) {
     case "n inan":
       return "D3D3D3";
     case "c":
-      return "D3D3D3";
+      return "EE82EE";
     default:
       return "ffffff";
   }
