@@ -137,6 +137,7 @@ router.get("/get/macrofamily_names", (req, res) => {
       res.json({
         message: "All Macrofamily names successfully returned.",
         success: true,
+        count: macrofamiles.length,
         data: macrofamiles,
       })
     )
@@ -161,6 +162,7 @@ router.get("/get/alphabet_names", (req, res) => {
       res.json({
         message: "All Alphabet names successfully returned.",
         success: true,
+        count: alphabetNames.length,
         data: alphabetNames,
       })
     )
@@ -235,6 +237,7 @@ router.get("/get/area_names", (req, res) => {
       res.json({
         message: "All Language area names successfully returned.",
         success: true,
+        count: allAreas.length,
         data: allAreas.sort(),
       });
     })
@@ -260,6 +263,7 @@ router.get("/search/area/:area", (req, res) => {
       res.json({
         message: `All Languages in ${req.params.area} successfully returned.`,
         success: true,
+        count: languages.length,
         data: languages,
       })
     )
