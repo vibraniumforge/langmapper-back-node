@@ -126,21 +126,43 @@ router.delete("/:id", (req, res) => {
 // search translations by word
 // @access = public
 router.get("/search/word/:word", (req, res) => {
-  // other data structure style
-  //   Translation.aggregate([
-  //     {
-  //       $lookup: {
-  //         from: "words",
-  //         localField: "word_name",
-  //         foreignField: "word_name",
-  //         as: "word_name",
-  //       },
-  //     },
-  //     { $unwind: "$word_name" },
-  //     { $match: { "language.word_name": req.params.word } },
-  //     { $project: { gender: 1 } },
-  //   ]);
-  Translation.find({ word_name: req.params.word })
+  Translation.aggregate([
+    {
+      $lookup: {
+        from: "languages",
+        localField: "language",
+        foreignField: "name",
+        as: "language",
+      },
+    },
+    { $unwind: "$language" },
+    {
+      $lookup: {
+        from: "words",
+        localField: "word_name",
+        foreignField: "word_name",
+        as: "word",
+      },
+    },
+    { $unwind: "$word_name" },
+    { $match: { word_name: req.params.word } },
+    { $sort: { "language.name": 1 } },
+    {
+      $project: {
+        _id: 0,
+        etymology: 1,
+        gender: 1,
+        link: 1,
+        romanization: 1,
+        translation: 1,
+        id: "$_id",
+        name: "$language.name",
+        family: "$language.family",
+        macrofamily: "$language.macrofamily",
+      },
+    },
+  ])
+    //   Translation.find({ word_name: req.params.word })
     .then((words) =>
       res.json({
         message: `Translations of ${req.params.word} successfully returned.`,
@@ -171,7 +193,40 @@ router.get("/search/gender/:word", (req, res) => {
       },
     },
     { $unwind: "$language" },
-    { $match: { word_name: req.params.word } },
+    {
+      $lookup: {
+        from: "words",
+        localField: "word_name",
+        foreignField: "word_name",
+        as: "word",
+      },
+    },
+    { $unwind: "$word_name" },
+    {
+      $match: {
+        $and: [
+          { word_name: req.params.word },
+          {
+            "language.macrofamily": { $in: ["Indo-European", "Afro-Asiatic"] },
+          },
+        ],
+      },
+    },
+    { $sort: { "language.family": 1 } },
+    {
+      $project: {
+        _id: 0,
+        etymology: 1,
+        gender: 1,
+        link: 1,
+        romanization: 1,
+        translation: 1,
+        id: "$_id",
+        name: "$language.name",
+        family: "$language.family",
+        macrofamily: "$language.macrofamily",
+      },
+    },
   ])
     .then((words) =>
       res.json({
@@ -197,13 +252,55 @@ router.get("/search/etymology/:word", (req, res) => {
   //   Translation.index({ etymology: "text" });
   // native mongo below
   //   Translation.createIndex({ etymology: 1 });
-  Translation.find({
-    $text: {
-      $search: req.params.word,
-      $caseSensitive: true,
-      $diacriticSensitive: false,
+  //   Translation.find({
+  //     $text: {
+  //       $search: req.params.word,
+  //       $caseSensitive: true,
+  //       $diacriticSensitive: false,
+  //     },
+  //   })
+  Translation.aggregate([
+    {
+      $match: {
+        $text: {
+          $search: req.params.word,
+        },
+      },
     },
-  })
+    {
+      $lookup: {
+        from: "languages",
+        localField: "language",
+        foreignField: "name",
+        as: "language",
+      },
+    },
+    { $unwind: "$language" },
+    {
+      $lookup: {
+        from: "words",
+        localField: "word_name",
+        foreignField: "word_name",
+        as: "word",
+      },
+    },
+    { $unwind: "$word_name" },
+    {
+      $project: {
+        _id: 0,
+        id: "$_id",
+        etymology: 1,
+        gender: 1,
+        link: 1,
+        romanization: 1,
+        translation: 1,
+        word_name: 1,
+        name: "$language.name",
+        family: "$language.family",
+        macrofamily: "$language.macrofamily",
+      },
+    },
+  ])
     .then((translations) =>
       res.json({
         message: `Etymologies containing ${req.params.word} successfully returned.`,
@@ -220,7 +317,7 @@ router.get("/search/etymology/:word", (req, res) => {
 
 // DONE
 // find_all_translations_by_macrofamily
-// GET api/v1/translations//search/macrofamily/:macrofamily
+// GET api/v1/translations/search/macrofamily/:macrofamily
 // search translations by macrofamily
 // @access = public
 router.get("/search/macrofamily/:macrofamily", (req, res) => {
@@ -234,7 +331,30 @@ router.get("/search/macrofamily/:macrofamily", (req, res) => {
       },
     },
     { $unwind: "$language" },
+    {
+      $lookup: {
+        from: "words",
+        localField: "word_name",
+        foreignField: "word_name",
+        as: "word",
+      },
+    },
+    { $unwind: "$word_name" },
     { $match: { "language.macrofamily": req.params.macrofamily } },
+    {
+      $project: {
+        _id: 0,
+        etymology: 1,
+        gender: 1,
+        link: 1,
+        romanization: 1,
+        translation: 1,
+        word_name: 1,
+        id: "$_id",
+        name: "$language.name",
+        family: "$language.family",
+      },
+    },
   ])
     .then((languages) =>
       res.json({
@@ -266,7 +386,30 @@ router.get("/search/language/:language", (req, res) => {
       },
     },
     { $unwind: "$language" },
+    {
+      $lookup: {
+        from: "words",
+        localField: "word_name",
+        foreignField: "word_name",
+        as: "word",
+      },
+    },
+    { $unwind: "$word_name" },
     { $match: { "language.name": req.params.language } },
+    {
+      $project: {
+        _id: 0,
+        etymology: 1,
+        gender: 1,
+        link: 1,
+        romanization: 1,
+        translation: 1,
+        word_name: 1,
+        id: "$_id",
+        // name: "$language.name",
+        // family: "$language.family",
+      },
+    },
   ])
     .then((languages) =>
       res.json({
@@ -352,7 +495,7 @@ router.get("/search/area/:area/:word", (req, res) => {
         as: "word",
       },
     },
-    { $unwind: "$word" },
+    { $unwind: "$word_name" },
     {
       $match: {
         $and: [
@@ -369,7 +512,7 @@ router.get("/search/area/:area/:word", (req, res) => {
     },
     {
       $project: {
-        _id: 1,
+        _id: 0,
         etymology: 1,
         gender: 1,
         link: 1,
@@ -377,9 +520,11 @@ router.get("/search/area/:area/:word", (req, res) => {
         translation: 1,
         language: 1,
         word_name: 1,
-        // area1: 1,
-        // area2: 1,
-        // area3: 1,
+        id: "$_id",
+        name: "$language.name",
+        family: "$language.family",
+        macrofamily: "$language.macrofamily",
+        subfamily: "$language.subfamily",
       },
     },
   ])
@@ -423,18 +568,31 @@ router.get("/search/area_europe_map/:area/:word", (req, res) => {
         as: "word",
       },
     },
-    { $unwind: "$word" },
+    { $unwind: "$word_name" },
     {
       $match: {
         $and: [
-          { "language.abbreviation": { $in: myEuropeSvg } },
           { word_name: req.params.word },
+          {
+            $or: [
+              { "language.area1": req.params.area },
+              { "language.area2": req.params.area },
+              { "language.area3": req.params.area },
+            ],
+          },
         ],
       },
     },
     {
+      $sort: {
+        "language.macrofamily": 1,
+        "language.family": 1,
+        "language.subfamily": 1,
+      },
+    },
+    {
       $project: {
-        _id: 1,
+        _id: 0,
         etymology: 1,
         gender: 1,
         link: 1,
@@ -442,9 +600,11 @@ router.get("/search/area_europe_map/:area/:word", (req, res) => {
         translation: 1,
         language: 1,
         word_name: 1,
-        // area1: 1,
-        // area2: 1,
-        // area3: 1,
+        id: "$_id",
+        name: "$language.name",
+        family: "$language.family",
+        macrofamily: "$language.macrofamily",
+        subfamily: "$language.subfamily",
       },
     },
   ])
@@ -480,7 +640,6 @@ router.get("/search/all_translations_by_area_img/:area/:word", (req, res) => {
       },
     },
     { $unwind: "$language" },
-
     {
       $lookup: {
         from: "words",
@@ -489,7 +648,7 @@ router.get("/search/all_translations_by_area_img/:area/:word", (req, res) => {
         as: "word",
       },
     },
-    { $unwind: "$word" },
+    { $unwind: "$word_name" },
     {
       $match: {
         $and: [
@@ -506,14 +665,26 @@ router.get("/search/all_translations_by_area_img/:area/:word", (req, res) => {
     },
     {
       $project: {
-        _id: 1,
+        _id: 0,
         etymology: 1,
         gender: 1,
         link: 1,
         romanization: 1,
         translation: 1,
-        language: 1,
+        name: 1,
+        abbreviation: 1,
+        alphabet: 1,
+        macrofamily: 1,
+        family: 1,
+        subfamily: 1,
+        area1: 1,
+        area2: 1,
+        area3: 1,
+        notes: 1,
+        alive: 1,
+        id: "$_id",
         word_name: 1,
+        definition: 1,
       },
     },
   ])
@@ -534,7 +705,7 @@ router.get("/search/all_translations_by_area_img/:area/:word", (req, res) => {
           });
           let langs = $("tspan");
           langs.each(function (i, el) {
-            let lang = $(el).text();
+            const lang = $(el).text();
             if (lang) {
               mapLanguages.push(lang.split("$")[1]);
             }
@@ -690,31 +861,52 @@ router.get("/search/all_genders_by_area_img/:area/:word", (req, res) => {
     {
       $match: {
         $and: [
-          { "language.abbreviation": { $in: myEuropeSvg } },
           { word_name: req.params.word },
+          {
+            $or: [
+              { "language.area1": req.params.area },
+              { "language.area2": req.params.area },
+              { "language.area3": req.params.area },
+            ],
+          },
         ],
       },
     },
     {
       $project: {
-        _id: 1,
+        _id: 0,
         etymology: 1,
         gender: 1,
         link: 1,
         romanization: 1,
         translation: 1,
-        language: 1,
+        name: 1,
+        abbreviation: 1,
+        alphabet: 1,
+        macrofamily: 1,
+        family: 1,
+        subfamily: 1,
+        area1: 1,
+        area2: 1,
+        area3: 1,
+        notes: 1,
+        alive: 1,
+        id: "$_id",
         word_name: 1,
+        definition: 1,
+        // name: "$language.name",
+        // family: "$language.family",
+        // macrofamily: "$language.macrofamily",
       },
     },
   ])
     .then((search) => {
       const searchResults = [...search];
       // the languages on the default map
-      let languagesArray = Combo.map((item) => item[0]);
+      const languagesArray = Combo.map((item) => item[0]);
 
       // the corresponding colors
-      let colorCodesArray = Combo.map((item) => item[1]);
+      const colorCodesArray = Combo.map((item) => item[1]);
 
       // the results of transforming the data
       let resultArray = [];
@@ -737,12 +929,13 @@ router.get("/search/all_genders_by_area_img/:area/:word", (req, res) => {
           });
           let langsParsed = $("tspan");
           langsParsed.each(function (i, el) {
-            let lang = $(el).text();
+            const lang = $(el).text();
             if (lang) {
               mapLanguages.push(lang.split("$")[1]);
             }
           });
 
+          console.log("searchResults=", searchResults[0]);
           // skip over languages that are results, but not on the map
           for (let result of searchResults) {
             if (!mapLanguages.includes(result.language.abbreviation)) {
@@ -757,7 +950,7 @@ router.get("/search/all_genders_by_area_img/:area/:word", (req, res) => {
             // handle romanization
             let thisResult = romanizationHelper(result);
 
-            let thisGender = result.gender ? result.gender : null;
+            const thisGender = result.gender ? result.gender : null;
             thisResult["gender"] = thisGender;
             resultArray.push(thisResult);
             currentLanguages.push(result.language.abbreviation);
@@ -825,7 +1018,7 @@ router.get("/search/all_genders_by_area_img/:area/:word", (req, res) => {
             const newRegex = new RegExp(replaceColor, "g");
             info = info.replace(
               newRegex,
-              "#" + genderColorFinder(resultArray[index]["gender"])
+              "#" + genderColorFinder(result["gender"])
             );
           });
           //   langsParsed.each(function (i, el) {
@@ -968,35 +1161,77 @@ router.get("/search/all_etymologies_by_area_img/:area/:word", (req, res) => {
         as: "word",
       },
     },
-    { $unwind: "$word" },
+    { $unwind: "$word_name" },
     {
       $match: {
         $and: [
-          { "language.abbreviation": { $in: myEuropeSvg } },
           { word_name: req.params.word },
+          {
+            $or: [
+              { "language.area1": req.params.area },
+              { "language.area2": req.params.area },
+              { "language.area3": req.params.area },
+            ],
+          },
         ],
       },
     },
     {
-      $project: {
-        _id: 1,
-        etymology: 1,
-        gender: 1,
-        link: 1,
-        romanization: 1,
-        translation: 1,
-        language: 1,
-        word_name: 1,
-      },
+      _id: 0,
+      etymology: 1,
+      gender: 1,
+      link: 1,
+      romanization: 1,
+      translation: 1,
+      name: 1,
+      abbreviation: 1,
+      alphabet: 1,
+      macrofamily: 1,
+      family: 1,
+      subfamily: 1,
+      area1: 1,
+      area2: 1,
+      area3: 1,
+      notes: 1,
+      alive: 1,
+      id: "$_id",
+      word_name: 1,
+      definition: 1,
+      //   _id: 0,
+      //   etymology: 1,
+      //   gender: 1,
+      //   link: 1,
+      //   romanization: 1,
+      //   translation: 1,
+      //   id: "$_id",
+      //   //   alive: "$language.alive",
+      //   //   alphabet: "$language.alphabet",
+      //   //   area1: "$language.area1",
+      //   //   area2: "$language.area2",
+      //   //   area3: "$language.area3",
+      // //   abbreviation: "$language.abbreviation",
+      // //   notes: "$language.notes",
+      // //   family: "$language.family",
+      // //   macrofamily: "$language.macrofamily",
+      // //   subfamily: "$language.subfamily",
+      // //   name: "$language.name",
+      // //   word_name: "$word.word_name",
+      // abbreviation: "$abbreviation",
+      // notes: "$notes",
+      // family: "$language.family",
+      // macrofamily: "$language.macrofamily",
+      // subfamily: "$language.subfamily",
+      // name: "$language.name",
+      // word_name: "$word.word_name",
     },
   ])
     .then((search) => {
       const searchResults = [...search];
       //  the languages on the default map
-      let languagesArray = Combo.map((item) => item[0]);
+      const languagesArray = Combo.map((item) => item[0]);
 
       // the corresponding colors
-      let colorCodesArray = Combo.map((item) => item[1]);
+      const colorCodesArray = Combo.map((item) => item[1]);
 
       // the results of transforming the data
       let resultArray = [];
@@ -1024,7 +1259,7 @@ router.get("/search/all_etymologies_by_area_img/:area/:word", (req, res) => {
           });
           let langs = $("tspan");
           langs.each(function (i, el) {
-            let lang = $(el).text();
+            const lang = $(el).text();
             if (lang) {
               mapLanguages.push(lang.split("$")[1]);
             }
@@ -1051,7 +1286,10 @@ router.get("/search/all_etymologies_by_area_img/:area/:word", (req, res) => {
           const familiesList = ["Albanian", "Anatolian", "Armenian", "Ancient Greek", "Hellenic", "Latin", "Proto-Balto‑Slavic", "Proto-Slavic", "Proto-Baltic", "Proto-Celtic", "Proto-Germanic", "Proto-Indo-Iranian", "Proto-Tocharian", "Proto-Finnic", "Proto-Sami", "Proto-Ugric", "Proto-Basque", "Proto-Turkic", "Proto-Afro-Asiatic" , "Semitic", "Arabic", "Proto-Kartvelian", "Proto-Northwest Caucasian", "Proto-Northeast Caucasian" ]
 
           for (let result of searchResults) {
-            console.log("result.l.abbreviation=", result.language.abbreviation);
+            console.log(
+              "result.language.abbreviation=",
+              result.language.abbreviation
+            );
 
             // skip results NOT on  the current map
             if (!mapLanguages.includes(result.language.abbreviation)) {
@@ -1105,7 +1343,7 @@ router.get("/search/all_etymologies_by_area_img/:area/:word", (req, res) => {
 
               // loop over the families to try to match
               for (let i = 0; i < familiesList.length; i++) {
-                let family = familiesList[i];
+                const family = familiesList[i];
                 console.log("family=", family);
                 console.log("matched=", matched);
                 if (
