@@ -6,7 +6,13 @@ const Word = require("../../../models/Word.js");
 // get all words
 // @access = public
 router.get("/", (req, res) => {
-  Word.find()
+  const wordProject = {
+    _id: 0,
+    id: "$_id",
+    word_name: 1,
+    definition: 1,
+  };
+  Word.find({}, wordProject)
     .sort({ date: 1 })
     .then((words) => res.json(words))
     .catch((err) => {
@@ -98,7 +104,7 @@ router.delete("/:id", (req, res) => {
   Word.findById(req.params.id)
     .then((word) => word.remove())
     .then(() =>
-      res.json({ message: `Language ${req.params.id} deleted.`, success: true })
+      res.json({ message: `Word ${req.params.id} deleted.`, success: true })
     )
     .catch((err) => res.status(404).json({ success: false, error: err }));
 });
