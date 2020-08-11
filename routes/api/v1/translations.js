@@ -144,7 +144,7 @@ router.get("/search/word/:word", (req, res) => {
         as: "word",
       },
     },
-    { $unwind: "$word_name" },
+    { $unwind: "$word" },
     { $match: { word_name: req.params.word } },
     { $sort: { "language.name": 1 } },
     {
@@ -201,7 +201,7 @@ router.get("/search/gender/:word", (req, res) => {
         as: "word",
       },
     },
-    { $unwind: "$word_name" },
+    { $unwind: "$word" },
     {
       $match: {
         $and: [
@@ -284,7 +284,7 @@ router.get("/search/etymology/:word", (req, res) => {
         as: "word",
       },
     },
-    { $unwind: "$word_name" },
+    { $unwind: "$word" },
     {
       $project: {
         _id: 0,
@@ -339,7 +339,7 @@ router.get("/search/macrofamily/:macrofamily", (req, res) => {
         as: "word",
       },
     },
-    { $unwind: "$word_name" },
+    { $unwind: "$word" },
     { $match: { "language.macrofamily": req.params.macrofamily } },
     {
       $project: {
@@ -394,7 +394,7 @@ router.get("/search/language/:language", (req, res) => {
         as: "word",
       },
     },
-    { $unwind: "$word_name" },
+    { $unwind: "$word" },
     { $match: { "language.name": req.params.language } },
     {
       $project: {
@@ -495,7 +495,7 @@ router.get("/search/area/:area/:word", (req, res) => {
         as: "word",
       },
     },
-    { $unwind: "$word_name" },
+    { $unwind: "$word" },
     {
       $match: {
         $and: [
@@ -525,6 +525,7 @@ router.get("/search/area/:area/:word", (req, res) => {
         family: "$language.family",
         macrofamily: "$language.macrofamily",
         subfamily: "$language.subfamily",
+        abbreviation: "$language.subfamily",
       },
     },
   ])
@@ -568,7 +569,7 @@ router.get("/search/area_europe_map/:area/:word", (req, res) => {
         as: "word",
       },
     },
-    { $unwind: "$word_name" },
+    { $unwind: "$word" },
     {
       $match: {
         $and: [
@@ -630,6 +631,8 @@ router.get("/search/area_europe_map/:area/:word", (req, res) => {
 // search translation by area and from the europe map by TRANSLATION
 // @access = public
 router.get("/search/all_translations_by_area_img/:area/:word", (req, res) => {
+  console.log("\n");
+  console.log("all_translations_by_area_img fires");
   Translation.aggregate([
     {
       $lookup: {
@@ -648,7 +651,7 @@ router.get("/search/all_translations_by_area_img/:area/:word", (req, res) => {
         as: "word",
       },
     },
-    { $unwind: "$word_name" },
+    { $unwind: "$word" },
     {
       $match: {
         $and: [
@@ -666,25 +669,28 @@ router.get("/search/all_translations_by_area_img/:area/:word", (req, res) => {
     {
       $project: {
         _id: 0,
+        id: "$_id",
         etymology: 1,
         gender: 1,
         link: 1,
         romanization: 1,
         translation: 1,
-        name: 1,
-        abbreviation: 1,
-        alphabet: 1,
-        macrofamily: 1,
-        family: 1,
-        subfamily: 1,
-        area1: 1,
-        area2: 1,
-        area3: 1,
-        notes: 1,
-        alive: 1,
-        id: "$_id",
-        word_name: 1,
-        definition: 1,
+        language: {
+          abbreviation: 1,
+          alphabet: 1,
+          macrofamily: 1,
+          family: 1,
+          subfamily: 1,
+          area1: 1,
+          area2: 1,
+          area3: 1,
+          notes: 1,
+          alive: 1,
+        },
+        word: {
+          word_name: 1,
+          definition: 1,
+        },
       },
     },
   ])
@@ -746,15 +752,34 @@ router.get("/search/all_translations_by_area_img/:area/:word", (req, res) => {
             }
           );
           console.log("file saved.");
+          console.log("sendFile fires");
+          const options = {
+            headers: {
+              "Content-Type": "image/svg+xml",
+              "x-timestamp": Date.now(),
+            },
+          };
+          //   res.setHeader("Content-Type", "image/svg+xml");
+          res.sendFile(
+            path.join(__dirname, "../../../images/my_europe_template_copy.svg"),
+            options,
+            (err) => {
+              if (err) {
+                console.log("Err=", err);
+              } else {
+                console.log("file sent");
+              }
+            }
+          );
         }
       );
     })
-    .then(() => {
-      res.setHeader("Content-Type", "image/svg+xml");
-      res.sendFile(
-        path.join(__dirname, "../../../images/my_europe_template_copy.svg")
-      );
-    })
+    // .then(() => {
+    //   res.setHeader("Content-Type", "image/svg+xml");
+    //   res.sendFile(
+    //     path.join(__dirname, "../../../images/my_europe_template_copy.svg")
+    //   );
+    // })
     .catch((err) => {
       console.log("err=", err);
       res.status(404).json({ success: false, error: err });
@@ -767,6 +792,7 @@ router.get("/search/all_translations_by_area_img/:area/:word", (req, res) => {
 // search translations by area from the europe map by GENDER
 // @access = public
 router.get("/search/all_genders_by_area_img/:area/:word", (req, res) => {
+  console.log("\n");
   console.log("find_all_genders_by_area_img FIRES");
   console.log("req.params.area=", req.params.area);
   console.log("req.params.word=", req.params.word);
@@ -875,28 +901,28 @@ router.get("/search/all_genders_by_area_img/:area/:word", (req, res) => {
     {
       $project: {
         _id: 0,
+        id: "$_id",
         etymology: 1,
         gender: 1,
         link: 1,
         romanization: 1,
         translation: 1,
-        name: 1,
-        abbreviation: 1,
-        alphabet: 1,
-        macrofamily: 1,
-        family: 1,
-        subfamily: 1,
-        area1: 1,
-        area2: 1,
-        area3: 1,
-        notes: 1,
-        alive: 1,
-        id: "$_id",
-        word_name: 1,
-        definition: 1,
-        // name: "$language.name",
-        // family: "$language.family",
-        // macrofamily: "$language.macrofamily",
+        language: {
+          abbreviation: 1,
+          alphabet: 1,
+          macrofamily: 1,
+          family: 1,
+          subfamily: 1,
+          area1: 1,
+          area2: 1,
+          area3: 1,
+          notes: 1,
+          alive: 1,
+        },
+        word: {
+          word_name: 1,
+          definition: 1,
+        },
       },
     },
   ])
@@ -935,7 +961,8 @@ router.get("/search/all_genders_by_area_img/:area/:word", (req, res) => {
             }
           });
 
-          console.log("searchResults=", searchResults[0]);
+          //   console.log("searchResults=", searchResults[0]);
+
           // skip over languages that are results, but not on the map
           for (let result of searchResults) {
             if (!mapLanguages.includes(result.language.abbreviation)) {
@@ -1050,15 +1077,34 @@ router.get("/search/all_genders_by_area_img/:area/:word", (req, res) => {
             }
           );
           console.log("file saved.");
+          console.log("sendFile fires");
+          const options = {
+            headers: {
+              "Content-Type": "image/svg+xml",
+              "x-timestamp": Date.now(),
+            },
+          };
+          //   res.setHeader("Content-Type", "image/svg+xml");
+          res.sendFile(
+            path.join(__dirname, "../../../images/my_europe_template_copy.svg"),
+            options,
+            (err) => {
+              if (err) {
+                console.log("Err=", err);
+              } else {
+                console.log("file sent");
+              }
+            }
+          );
         }
       );
     })
-    .then(() => {
-      res.setHeader("Content-Type", "image/svg+xml");
-      res.sendFile(
-        path.join(__dirname, "../../../images/my_europe_template_copy.svg")
-      );
-    })
+    // .then(() => {
+    //   res.setHeader("Content-Type", "image/svg+xml");
+    //   res.sendFile(
+    //     path.join(__dirname, "../../../images/my_europe_template_copy.svg")
+    //   );
+    // })
     .catch((err) => {
       console.log("err=", err);
       res.status(404).json({ success: false, error: err });
@@ -1071,7 +1117,8 @@ router.get("/search/all_genders_by_area_img/:area/:word", (req, res) => {
 // search translations by area from the europe map by ETYMOLOGY
 // @access = public
 router.get("/search/all_etymologies_by_area_img/:area/:word", (req, res) => {
-  console.log("all_etymologies_by_area_img FIRES");
+  console.log("\n");
+  console.log("all_ETYMOLOGIES_by_area_img FIRES");
   console.log("req.params.area=", req.params.area);
   console.log("req.params.word=", req.params.word);
   //prettier-ignore
@@ -1161,7 +1208,7 @@ router.get("/search/all_etymologies_by_area_img/:area/:word", (req, res) => {
         as: "word",
       },
     },
-    { $unwind: "$word_name" },
+    { $unwind: "$word" },
     {
       $match: {
         $and: [
@@ -1177,52 +1224,31 @@ router.get("/search/all_etymologies_by_area_img/:area/:word", (req, res) => {
       },
     },
     {
-      _id: 0,
-      etymology: 1,
-      gender: 1,
-      link: 1,
-      romanization: 1,
-      translation: 1,
-      name: 1,
-      abbreviation: 1,
-      alphabet: 1,
-      macrofamily: 1,
-      family: 1,
-      subfamily: 1,
-      area1: 1,
-      area2: 1,
-      area3: 1,
-      notes: 1,
-      alive: 1,
-      id: "$_id",
-      word_name: 1,
-      definition: 1,
-      //   _id: 0,
-      //   etymology: 1,
-      //   gender: 1,
-      //   link: 1,
-      //   romanization: 1,
-      //   translation: 1,
-      //   id: "$_id",
-      //   //   alive: "$language.alive",
-      //   //   alphabet: "$language.alphabet",
-      //   //   area1: "$language.area1",
-      //   //   area2: "$language.area2",
-      //   //   area3: "$language.area3",
-      // //   abbreviation: "$language.abbreviation",
-      // //   notes: "$language.notes",
-      // //   family: "$language.family",
-      // //   macrofamily: "$language.macrofamily",
-      // //   subfamily: "$language.subfamily",
-      // //   name: "$language.name",
-      // //   word_name: "$word.word_name",
-      // abbreviation: "$abbreviation",
-      // notes: "$notes",
-      // family: "$language.family",
-      // macrofamily: "$language.macrofamily",
-      // subfamily: "$language.subfamily",
-      // name: "$language.name",
-      // word_name: "$word.word_name",
+      $project: {
+        _id: 0,
+        id: "$_id",
+        etymology: 1,
+        gender: 1,
+        link: 1,
+        romanization: 1,
+        translation: 1,
+        language: {
+          abbreviation: 1,
+          alphabet: 1,
+          macrofamily: 1,
+          family: 1,
+          subfamily: 1,
+          area1: 1,
+          area2: 1,
+          area3: 1,
+          notes: 1,
+          alive: 1,
+        },
+        word: {
+          word_name: 1,
+          definition: 1,
+        },
+      },
     },
   ])
     .then((search) => {
@@ -1285,11 +1311,13 @@ router.get("/search/all_etymologies_by_area_img/:area/:word", (req, res) => {
           //prettier-ignore
           const familiesList = ["Albanian", "Anatolian", "Armenian", "Ancient Greek", "Hellenic", "Latin", "Proto-Balto‑Slavic", "Proto-Slavic", "Proto-Baltic", "Proto-Celtic", "Proto-Germanic", "Proto-Indo-Iranian", "Proto-Tocharian", "Proto-Finnic", "Proto-Sami", "Proto-Ugric", "Proto-Basque", "Proto-Turkic", "Proto-Afro-Asiatic" , "Semitic", "Arabic", "Proto-Kartvelian", "Proto-Northwest Caucasian", "Proto-Northeast Caucasian" ]
 
+          //   console.log("searchResults[0]", searchResults[0]);
+
           for (let result of searchResults) {
-            console.log(
-              "result.language.abbreviation=",
-              result.language.abbreviation
-            );
+            // console.log(
+            //   "result.language.abbreviation=",
+            //   result.language.abbreviation
+            // );
 
             // skip results NOT on  the current map
             if (!mapLanguages.includes(result.language.abbreviation)) {
@@ -1338,14 +1366,14 @@ router.get("/search/all_etymologies_by_area_img/:area/:word", (req, res) => {
               });
               cleanEtymology = cleanEtymology2.join(" ").trim();
 
-              console.log("currentEtymologyArray=", currentEtymologyArray);
-              console.log("cleanEtymology=", cleanEtymology);
+              //   console.log("currentEtymologyArray=", currentEtymologyArray);
+              //   console.log("cleanEtymology=", cleanEtymology);
 
               // loop over the families to try to match
               for (let i = 0; i < familiesList.length; i++) {
                 const family = familiesList[i];
-                console.log("family=", family);
-                console.log("matched=", matched);
+                // console.log("family=", family);
+                // console.log("matched=", matched);
                 if (
                   cleanEtymology.includes(`From ${family}`) ||
                   cleanEtymology.includes(`from ${family}`)
@@ -1355,11 +1383,11 @@ router.get("/search/all_etymologies_by_area_img/:area/:word", (req, res) => {
                     cleanEtymology.charAt(0).toUpperCase() +
                     cleanEtymology.slice(1);
                   matched = true;
-                  console.log("MATCH");
-                  console.log("matched=", matched);
-                  console.log("matchingFamily=", matchingFamily);
-                  console.log("matchingEtymology=", matchingEtymology);
-                  console.log("\n");
+                  //   console.log("MATCH");
+                  //   console.log("matched=", matched);
+                  //   console.log("matchingFamily=", matchingFamily);
+                  //   console.log("matchingEtymology=", matchingEtymology);
+                  //   console.log("\n");
                   break;
                 }
                 if (matched) {
@@ -1487,7 +1515,7 @@ router.get("/search/all_etymologies_by_area_img/:area/:word", (req, res) => {
             const newRegex = new RegExp(replaceColor, "g");
             info = info.replace(newRegex, "#" + result["color"]);
           });
-          console.log("\n");
+          //   console.log("\n");
           console.log(
             `${searchResults.length} matching languages in the DB for the word: ${req.params.word} in: ${req.params.area}`
           );
@@ -1512,21 +1540,97 @@ router.get("/search/all_etymologies_by_area_img/:area/:word", (req, res) => {
             path.join(__dirname, "../../../images/my_europe_template_copy.svg"),
             info,
             function (err, result) {
-              if (err) throw err;
+              if (err) {
+                throw err;
+              } else {
+                console.log("file written.");
+              }
               console.log("typeof result=", typeof result);
             }
           );
-
-          console.log("file saved.");
+          console.log("sendFile fires");
+          const options = {
+            headers: {
+              "Content-Type": "image/svg+xml",
+              "x-timestamp": Date.now(),
+            },
+          };
+          //   res.setHeader("Content-Type", "image/svg+xml");
+          res.sendFile(
+            path.join(__dirname, "../../../images/my_europe_template_copy.svg"),
+            options,
+            (err) => {
+              if (err) {
+                console.log("Err=", err);
+              } else {
+                console.log("file sent");
+              }
+            }
+          );
+          //   return info;
         }
+        // above is end of readFile callback
+        // below end of function line
       );
+      //   console.log("sendFile fires");
+      //   const options = {
+      //     headers: {
+      //       "Content-Type": "image/svg+xml",
+      //       "x-timestamp": Date.now(),
+      //     },
+      //   };
+      //   res.setHeader("Content-Type", "image/svg+xml");
+      //   res.sendFile(
+      //     path.join(__dirname, "../../../images/my_europe_template_copy.svg"),
+      //     options,
+      //     (err) => {
+      //       if (err) {
+      //         console.log("Err=", err);
+      //       } else {
+      //         console.log("file sent");
+      //       }
+      //     }
+      //   );
+      console.log("\n");
+      //   end of then block below
     })
-    .then(() => {
-      res.setHeader("Content-Type", "image/svg+xml");
-      res.sendFile(
-        path.join(__dirname, "../../../images/my_europe_template_copy.svg")
-      );
-    })
+    // .then((info) => {
+    //   console.log("writeFileSync fires");
+    //   console.log("typeof info=", typeof info);
+    //   console.log("info.length=", info.length);
+    //   if (info) {
+    //     fs.writeFile(
+    //       path.join(__dirname, "../../../images/my_europe_template_copy.svg"),
+    //       info,
+    //       function (err, result) {
+    //         if (err) throw err;
+    //         console.log("typeof result=", typeof result);
+    //       }
+    //     );
+    //   }
+    // })
+    // .then(() => {
+    //   console.log("sendFile fires");
+    //   const options = {
+    //     headers: {
+    //       "Content-Type": "image/svg+xml",
+    //       "x-timestamp": Date.now(),
+    //     },
+    //   };
+    //   res.setHeader("Content-Type", "image/svg+xml");
+    //   res.sendFile(
+    //     path.join(__dirname, "../../../images/my_europe_template_copy.svg"),
+    //     options,
+    //     (err) => {
+    //       if (err) {
+    //         console.log("Err=", err);
+    //       } else {
+    //         console.log("file sent");
+    //       }
+    //     }
+    //   );
+    //   console.log("\n");
+    // })
     .catch((err) => {
       console.log("err=", err);
       res.status(404).json({ success: false, error: err });
@@ -1550,7 +1654,7 @@ function romanizationHelper(result) {
   }
 }
 
-// covert a text gender "m"/"f" whatever to the right color code
+// covert a text gender input string "m"/"f" etc to the right color code
 function genderColorFinder(gender) {
   switch (gender) {
     case "m":
