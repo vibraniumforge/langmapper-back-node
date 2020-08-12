@@ -24,7 +24,6 @@ router.get("/", (req, res) => {
 // get translation by id
 // @access = public
 router.get("/:id", (req, res) => {
-  console.log(req.params.id);
   //   Translation.findById(req.params.id)
   Translation.aggregate([
     {
@@ -45,8 +44,6 @@ router.get("/:id", (req, res) => {
       },
     },
     { $unwind: "$word" },
-    // { $match: { _id: req.params.id } },
-    // { $match: { _id: "ObjectId('5f2f766e93566db0d2adc69f')" } },
     { $match: { _id: new ObjectId(req.params.id) } },
     {
       $project: {
@@ -107,7 +104,6 @@ router.post("/", (req, res) => {
 //  @desc Update a Translation
 //  @access public
 router.patch("/:id", (req, res) => {
-  console.log(req.body);
   Translation.findOneAndUpdate(
     { _id: req.params.id },
     {
