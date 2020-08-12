@@ -15,4 +15,39 @@ const WordSchema = new Schema(
   { timestamps: true }
 );
 
-module.exports = Word = mongoose.model("word", WordSchema);
+WordSchema.statics.allWordNames = function () {
+  //   const allWordNamesProject = {
+  //     _id: 0,
+  //     id: "$_id",
+  //     word_name: 1,
+  //   };
+  // WordSchema.statics.wordsCount = function () {
+  //   return mongoose.model("Word").countDocuments();
+  // };
+  return mongoose.model("Word").aggregate([
+    // { $match: { word_name: {} } },
+    {
+      $project: {
+        // _id: 0,
+        // id: "$_id",
+        _id: 1,
+        word_name: 1,
+      },
+    },
+    { $sort: { word_name: 1 } },
+  ]);
+};
+
+WordSchema.statics.findWordDefinition = function (word) {
+  console.log("findWordDefinition fires");
+  const findWordDefinitionProject = {
+    _id: 1,
+    id: "$_id",
+    definition: 1,
+  };
+  return mongoose
+    .model("Word")
+    .findOne({ word_name: word }, findWordDefinitionProject);
+};
+
+module.exports = Word = mongoose.model("Word", WordSchema);
