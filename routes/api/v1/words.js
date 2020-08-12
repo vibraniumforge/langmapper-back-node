@@ -60,12 +60,11 @@ router.post("/", (req, res) => {
 //  @desc Update a Word
 //  @access PRIVATE
 router.patch("/:id", (req, res) => {
-  console.log("fires");
   Word.findOneAndUpdate(
     { _id: req.params.id },
     {
       $set: {
-        word_name: req.body.word.word_name,
+        // word_name: req.body.word.word_name,
         definition: req.body.word.definition,
       },
     },
@@ -73,20 +72,18 @@ router.patch("/:id", (req, res) => {
       new: true,
     }
   )
-    .then(
+    .then((word) => {
       res.status(200).json({
         message: `Word ${req.params.id} updated.`,
         success: true,
-        // data: newLanguage,
-      })
-    )
-    .then(
-      console.log({
-        message: `Word ${req.params.id} updated.`,
-        success: true,
-        // data: newLanguage,
-      })
-    )
+        data: word,
+      });
+      //   console.log({
+      //     message: `Word ${req.params.id} updated.`,
+      //     success: true,
+      //     data: word,
+      //   });
+    })
     .catch((err) => {
       console.log(err);
       res.status(404).json({
