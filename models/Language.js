@@ -51,4 +51,31 @@ const LanguageSchema = new Schema(
   { timestamps: true }
 );
 
-module.exports = Language = mongoose.model("language", LanguageSchema);
+LanguageSchema.statics.findLanguagesByArea = function (area) {
+  return mongoose.model("Language").aggregate([
+    {
+      $match: {
+        $or: [{ area1: area }, { area2: area }, { area3: area }],
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        id: "$_id",
+        name: 1,
+        abbreviation: 1,
+        alphabet: 1,
+        macrofamily: 1,
+        family: 1,
+        subfamily: 1,
+        area1: 1,
+        area2: 1,
+        area3: 1,
+        notes: 1,
+        alive: 1,
+      },
+    },
+  ]);
+};
+
+module.exports = Language = mongoose.model("Language", LanguageSchema);
