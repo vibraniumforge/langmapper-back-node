@@ -112,56 +112,69 @@ router.delete("/:id", (req, res) => {
 // get all word names
 // @access = public
 router.get("/get/word_names", (req, res) => {
-  Word.find()
-    .sort({ word_name: 1 })
+  Word.allWordNames()
+    //   Word.find()
+    //     .sort({ word_name: 1 })
     .then((words) =>
       words.map((word) => {
         return { id: word._id, word_name: word.word_name };
       })
     )
-    .then((words) =>
-      res.json({
+    .then((words) => {
+      //   console.log(words);
+      const response = {
         message: "All Word names successfully returned.",
         success: true,
         data: words,
-      })
-    )
+      };
+      console.log(response);
+      res.json(response);
+    })
     .catch((err) => {
       console.log(err);
       res.status(404).json({ success: false, error: err });
     });
 });
 
+// DONE
 // GET api/v1/words/get/words_count
 // get count of words
 // @access = public
 router.get("/get/words_count", (req, res) => {
+  //   Word.wordsCount()
   Word.countDocuments()
-    .then((count) =>
-      res.json({
+    .then((count) => {
+      const response = {
         message: "Words count successfully returned.",
         success: true,
         data: count,
-      })
-    )
+      };
+      console.log(response);
+      res.status(200).json(response);
+    })
     .catch((err) => {
       console.log(err);
       res.status(404).json({ success: false, error: err });
     });
 });
 
+// DONE
 // GET api/v1/words/search/definition/:word
 // get one word's definintion
 // @access = public
 router.get("/search/definition/:word", (req, res) => {
-  Word.find({ word_name: req.params.word })
-    .then((word) =>
-      res.json({
+  //   Word.find({ word_name: req.params.word })
+  Word.findWordDefinition(req.params.word)
+    .then((word) => {
+      const response = {
         message: "Word definition successfully returned.",
         success: true,
-        data: [word[0].definition],
-      })
-    )
+        data: word.definition,
+      };
+      //   console.log(word);
+      console.log(response);
+      res.status(200).json(response);
+    })
     .catch((err) => {
       console.log(err);
       res.status(404).json({ success: false, error: err });
