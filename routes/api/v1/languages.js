@@ -267,34 +267,35 @@ router.get("/get/area_names", (req, res) => {
 // search languages by area
 // @access = public
 router.get("/search/area/:area", (req, res) => {
-  Language.aggregate([
-    {
-      $match: {
-        $or: [
-          { area1: req.params.area },
-          { area2: req.params.area },
-          { area3: req.params.area },
-        ],
-      },
-    },
-    {
-      $project: {
-        _id: 0,
-        id: "$_id",
-        name: 1,
-        abbreviation: 1,
-        alphabet: 1,
-        macrofamily: 1,
-        family: 1,
-        subfamily: 1,
-        area1: 1,
-        area2: 1,
-        area3: 1,
-        notes: 1,
-        alive: 1,
-      },
-    },
-  ])
+  Language.findLanguagesByArea(req.params.area)
+    //   Language.aggregate([
+    //     {
+    //       $match: {
+    //         $or: [
+    //           { area1: req.params.area },
+    //           { area2: req.params.area },
+    //           { area3: req.params.area },
+    //         ],
+    //       },
+    //     },
+    //     {
+    //       $project: {
+    //         _id: 0,
+    //         id: "$_id",
+    //         name: 1,
+    //         abbreviation: 1,
+    //         alphabet: 1,
+    //         macrofamily: 1,
+    //         family: 1,
+    //         subfamily: 1,
+    //         area1: 1,
+    //         area2: 1,
+    //         area3: 1,
+    //         notes: 1,
+    //         alive: 1,
+    //       },
+    //     },
+    //   ])
     .then((languages) =>
       res.json({
         message: `All Languages in ${req.params.area} successfully returned.`,
