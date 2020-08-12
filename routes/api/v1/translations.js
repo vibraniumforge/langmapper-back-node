@@ -4,6 +4,8 @@ const fs = require("fs");
 const cheerio = require("cheerio");
 const path = require("path");
 const Translation = require("../../../models/Translation.js");
+const Mongoose = require("mongoose");
+const ObjectId = Mongoose.Types.ObjectId;
 
 // GET api/v1/translations
 // get all translations
@@ -22,8 +24,51 @@ router.get("/", (req, res) => {
 // get translation by id
 // @access = public
 router.get("/:id", (req, res) => {
-  Translation.findById(req.params.id)
-    .then((translation) => res.json(translation))
+  console.log(req.params.id);
+  //   Translation.findById(req.params.id)
+  Translation.aggregate([
+    {
+      $lookup: {
+        from: "languages",
+        localField: "language",
+        foreignField: "name",
+        as: "language",
+      },
+    },
+    { $unwind: "$language" },
+    {
+      $lookup: {
+        from: "words",
+        localField: "word_name",
+        foreignField: "word_name",
+        as: "word",
+      },
+    },
+    { $unwind: "$word" },
+    // { $match: { _id: req.params.id } },
+    // { $match: { _id: "ObjectId('5f2f766e93566db0d2adc69f')" } },
+    { $match: { _id: new ObjectId(req.params.id) } },
+    {
+      $project: {
+        _id: 0,
+        etymology: 1,
+        gender: 1,
+        link: 1,
+        romanization: 1,
+        translation: 1,
+        language: {
+          name: 1,
+        },
+        word: {
+          word_name: 1,
+        },
+      },
+    },
+  ])
+    .then((translation) => {
+      console.log(translation[0]);
+      res.json(translation[0]);
+    })
     .catch((err) => {
       console.log(err);
       res.status(404).json({ success: false, error: err });
@@ -49,6 +94,7 @@ router.post("/", (req, res) => {
       res.status(200).json({
         success: true,
         message: "Translation createed",
+        data: newTranslation,
       })
     )
     .catch((err) => {
@@ -61,12 +107,13 @@ router.post("/", (req, res) => {
 //  @desc Update a Translation
 //  @access public
 router.patch("/:id", (req, res) => {
+  console.log(req.body);
   Translation.findOneAndUpdate(
     { _id: req.params.id },
     {
       $set: {
-        language: req.body.translation.language,
-        word_name: req.body.translation.word_name,
+        // language: req.body.translation.language,
+        // word_name: req.body.translation.word_name,
         etymology: req.body.translation.etymology,
         gender: req.body.translation.gender,
         link: req.body.translation.link,
@@ -78,12 +125,13 @@ router.patch("/:id", (req, res) => {
       new: true,
     }
   )
-    .then(
+    .then((editedTranslation) => {
       res.status(200).json({
         message: `Translation ${req.params.id} updated.`,
         success: true,
-      })
-    )
+        data: editedTranslation,
+      });
+    })
     .then(
       console.log({
         message: `Translation ${req.params.id} updated.`,
@@ -453,11 +501,6 @@ router.get("/get/translations_count", (req, res) => {
 router.get("/get/seeds", (req, res) => {
   Translation.find()
     .limit(100)
-    // .then((translations) =>
-    //   translations.map((translation) => {
-    //     // return { id: word._id, word_name: word.word_name };
-    //   })
-    // )
     .then((translations) =>
       res.json({
         message: `Translations seeds successfully returned`,
