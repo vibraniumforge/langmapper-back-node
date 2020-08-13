@@ -34,8 +34,24 @@ router.get("/", (req, res) => {
 // get language by id
 // @access = public
 router.get("/:id", (req, res) => {
-  Language.findById(req.params.id)
-    .then((language) => res.json(language))
+  const languageProject = {
+    _id: 0,
+    id: "$_id",
+    name: 1,
+    abbreviation: 1,
+    alphabet: 1,
+    macrofamily: 1,
+    family: 1,
+    subfamily: 1,
+    area1: 1,
+    area2: 1,
+    area3: 1,
+    notes: 1,
+    alive: 1,
+  };
+  Language.findById(req.params.id, languageProject)
+    .sort({ date: 1 })
+    .then((languages) => res.json(languages))
     .catch((err) => {
       console.log(err);
       res.status(404).json({ success: false, error: err });
