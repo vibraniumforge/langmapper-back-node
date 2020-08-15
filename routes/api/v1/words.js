@@ -23,7 +23,6 @@ router.get("/", (req, res) => {
 // get word by id
 // @access = public
 router.get("/:id([0-9a-fA-F]{24})", (req, res) => {
-  console.log(req.params.id);
   Word.aggregate([
     { $match: { _id: ObjectId(req.params.id) } },
     {
@@ -36,11 +35,12 @@ router.get("/:id([0-9a-fA-F]{24})", (req, res) => {
     },
   ])
     .then((word) => {
-      res.status(200).json({
+      const message = {
         success: true,
         message: `Word ${req.params.id} found.`,
         data: word[0],
-      });
+      };
+      res.status(200).json(message);
     })
     .catch((err) => {
       console.log(err);
@@ -182,8 +182,6 @@ router.get("/search/definition/:word", (req, res) => {
         success: true,
         data: word.definition,
       };
-      //   console.log(word);
-      console.log(response);
       res.status(200).json(response);
     })
     .catch((err) => {
