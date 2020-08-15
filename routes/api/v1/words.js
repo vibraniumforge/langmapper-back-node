@@ -1,18 +1,16 @@
 const express = require("express");
 const router = express.Router();
 const Word = require("../../../models/Word.js");
+const Mongoose = require("mongoose");
+const ObjectId = Mongoose.Types.ObjectId;
 
 // GET api/v1/words
 // get all words
 // @access = public
 router.get("/", (req, res) => {
-  const wordProject = {
-    _id: 0,
-    id: "$_id",
-    word_name: 1,
-    definition: 1,
-  };
-  Word.find({}, wordProject)
+  Word.aggregate([
+    { $project: { _id: 0, id: "$_id", word_name: 1, definition: 1 } },
+  ])
     .sort({ date: 1 })
     .then((words) => res.json(words))
     .catch((err) => {
@@ -25,8 +23,25 @@ router.get("/", (req, res) => {
 // get word by id
 // @access = public
 router.get("/:id([0-9a-fA-F]{24})", (req, res) => {
-  Word.findById(req.params.id)
-    .then((word) => res.json(word))
+  console.log(req.params.id);
+  Word.aggregate([
+    { $match: { _id: ObjectId(req.params.id) } },
+    {
+      $project: {
+        _id: 0,
+        id: "$_id",
+        word_name: 1,
+        definition: 1,
+      },
+    },
+  ])
+    .then((word) => {
+      res.status(200).json({
+        success: true,
+        message: `Word ${req.params.id} found.`,
+        data: word[0],
+      });
+    })
     .catch((err) => {
       console.log(err);
       res.status(404).json({ success: false, error: err });
@@ -73,16 +88,12 @@ router.patch("/:id", (req, res) => {
     }
   )
     .then((word) => {
-      res.status(200).json({
+      const message = {
         message: `Word ${req.params.id} updated.`,
         success: true,
         data: word,
-      });
-      //   console.log({
-      //     message: `Word ${req.params.id} updated.`,
-      //     success: true,
-      //     data: word,
-      //   });
+      };
+      res.status(200).json(message);
     })
     .catch((err) => {
       console.log(err);
@@ -127,7 +138,7 @@ router.get("/get/word_names", (req, res) => {
         success: true,
         data: words,
       };
-      console.log(response);
+      //   console.log(response);
       res.json(response);
     })
     .catch((err) => {
