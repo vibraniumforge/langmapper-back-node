@@ -39,7 +39,6 @@ WordSchema.statics.allWordNames = function () {
 };
 
 WordSchema.statics.findWordDefinition = function (word) {
-  console.log("findWordDefinition fires");
   const findWordDefinitionProject = {
     _id: 1,
     id: "$_id",
