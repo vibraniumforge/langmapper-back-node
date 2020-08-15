@@ -1,27 +1,32 @@
 const express = require("express");
 const router = express.Router();
 const Language = require("../../../models/Language.js");
+const Mongoose = require("mongoose");
+const ObjectId = Mongoose.Types.ObjectId;
 
 // GET api/v1/languages
 // get all languages
 // @access = public
 router.get("/", (req, res) => {
-  const languageProject = {
-    _id: 0,
-    id: "$_id",
-    name: 1,
-    abbreviation: 1,
-    alphabet: 1,
-    macrofamily: 1,
-    family: 1,
-    subfamily: 1,
-    area1: 1,
-    area2: 1,
-    area3: 1,
-    notes: 1,
-    alive: 1,
-  };
-  Language.find({}, languageProject)
+  Language.aggregate([
+    {
+      $project: {
+        _id: 0,
+        id: "$_id",
+        name: 1,
+        abbreviation: 1,
+        alphabet: 1,
+        macrofamily: 1,
+        family: 1,
+        subfamily: 1,
+        area1: 1,
+        area2: 1,
+        area3: 1,
+        notes: 1,
+        alive: 1,
+      },
+    },
+  ])
     .sort({ date: 1 })
     .then((languages) => res.json(languages))
     .catch((err) => {
@@ -33,25 +38,28 @@ router.get("/", (req, res) => {
 // GET api/v1/language
 // get language by id
 // @access = public
-router.get("/:id", (req, res) => {
-  const languageProject = {
-    _id: 0,
-    id: "$_id",
-    name: 1,
-    abbreviation: 1,
-    alphabet: 1,
-    macrofamily: 1,
-    family: 1,
-    subfamily: 1,
-    area1: 1,
-    area2: 1,
-    area3: 1,
-    notes: 1,
-    alive: 1,
-  };
-  Language.findById(req.params.id, languageProject)
-    .sort({ date: 1 })
-    .then((languages) => res.json(languages))
+router.get("/:id([0-9a-fA-F]{24})", (req, res) => {
+  Language.aggregate([
+    { $match: { _id: ObjectId(req.params.id) } },
+    {
+      $project: {
+        _id: 0,
+        id: "$_id",
+        name: 1,
+        abbreviation: 1,
+        alphabet: 1,
+        macrofamily: 1,
+        family: 1,
+        subfamily: 1,
+        area1: 1,
+        area2: 1,
+        area3: 1,
+        notes: 1,
+        alive: 1,
+      },
+    },
+  ])
+    .then((language) => res.json(language[0]))
     .catch((err) => {
       console.log(err);
       res.status(404).json({ success: false, error: err });
