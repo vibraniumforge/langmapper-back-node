@@ -11,20 +11,6 @@ const ObjectId = Mongoose.Types.ObjectId;
 // get all translations
 // @access = public
 router.get("/", (req, res) => {
-  Translation.find()
-    .sort({ date: 1 })
-    .then((translations) => res.json(translations))
-    .catch((err) => {
-      console.log(err);
-      res.status(404).json({ success: false, error: err });
-    });
-});
-
-// GET api/v1/translation
-// get translation by id
-// @access = public
-router.get("/:id", (req, res) => {
-  //   Translation.findById(req.params.id)
   Translation.aggregate([
     {
       $lookup: {
@@ -44,26 +30,81 @@ router.get("/:id", (req, res) => {
       },
     },
     { $unwind: "$word" },
-    { $match: { _id: new ObjectId(req.params.id) } },
     {
       $project: {
         _id: 0,
+        id: "$_id",
         etymology: 1,
         gender: 1,
         link: 1,
         romanization: 1,
         translation: 1,
+        // word_id: "word._id",
         language: {
-          name: 1,
+          id: "$language._id",
+          name: "$language.name",
         },
         word: {
-          word_name: 1,
+          id: "$word._id",
+          word_name: "$word.word_name",
+        },
+      },
+    },
+  ])
+    .sort({ date: 1 })
+    .then((translations) => res.json(translations))
+    .catch((err) => {
+      console.log(err);
+      res.status(404).json({ success: false, error: err });
+    });
+});
+
+// GET api/v1/translation
+// get translation by id
+// @access = public
+router.get("/:id([0-9a-fA-F]{24})", (req, res) => {
+  Translation.aggregate([
+    {
+      $lookup: {
+        from: "languages",
+        localField: "language",
+        foreignField: "name",
+        as: "language",
+      },
+    },
+    { $unwind: "$language" },
+    {
+      $lookup: {
+        from: "words",
+        localField: "word_name",
+        foreignField: "word_name",
+        as: "word",
+      },
+    },
+    { $unwind: "$word" },
+    { $match: { _id: ObjectId(req.params.id) } },
+    {
+      $project: {
+        _id: 0,
+        id: "$_id",
+        etymology: 1,
+        gender: 1,
+        link: 1,
+        romanization: 1,
+        translation: 1,
+        // word_id: "word._id",
+        language: {
+          id: "$language._id",
+          name: "$language.name",
+        },
+        word: {
+          id: "$word._id",
+          word_name: "$word.word_name",
         },
       },
     },
   ])
     .then((translation) => {
-      console.log(translation[0]);
       res.json(translation[0]);
     })
     .catch((err) => {
@@ -170,42 +211,43 @@ router.delete("/:id", (req, res) => {
 // search translations by word
 // @access = public
 router.get("/search/word/:word", (req, res) => {
-  Translation.aggregate([
-    {
-      $lookup: {
-        from: "languages",
-        localField: "language",
-        foreignField: "name",
-        as: "language",
-      },
-    },
-    { $unwind: "$language" },
-    {
-      $lookup: {
-        from: "words",
-        localField: "word_name",
-        foreignField: "word_name",
-        as: "word",
-      },
-    },
-    { $unwind: "$word" },
-    { $match: { word_name: req.params.word } },
-    { $sort: { "language.name": 1 } },
-    {
-      $project: {
-        _id: 0,
-        etymology: 1,
-        gender: 1,
-        link: 1,
-        romanization: 1,
-        translation: 1,
-        id: "$_id",
-        name: "$language.name",
-        family: "$language.family",
-        macrofamily: "$language.macrofamily",
-      },
-    },
-  ])
+  Translation.finAllTranslationsByWord(req.params.word)
+    //   Translation.aggregate([
+    //     {
+    //       $lookup: {
+    //         from: "languages",
+    //         localField: "language",
+    //         foreignField: "name",
+    //         as: "language",
+    //       },
+    //     },
+    //     { $unwind: "$language" },
+    //     {
+    //       $lookup: {
+    //         from: "words",
+    //         localField: "word_name",
+    //         foreignField: "word_name",
+    //         as: "word",
+    //       },
+    //     },
+    //     { $unwind: "$word" },
+    //     { $match: { word_name: req.params.word } },
+    //     { $sort: { "language.name": 1 } },
+    //     {
+    //       $project: {
+    //         _id: 0,
+    //         etymology: 1,
+    //         gender: 1,
+    //         link: 1,
+    //         romanization: 1,
+    //         translation: 1,
+    //         id: "$_id",
+    //         name: "$language.name",
+    //         family: "$language.family",
+    //         macrofamily: "$language.macrofamily",
+    //       },
+    //     },
+    //   ])
     //   Translation.find({ word_name: req.params.word })
     .then((words) =>
       res.json({
@@ -227,51 +269,52 @@ router.get("/search/word/:word", (req, res) => {
 // search translations by word
 // @access = public
 router.get("/search/gender/:word", (req, res) => {
-  Translation.aggregate([
-    {
-      $lookup: {
-        from: "languages",
-        localField: "language",
-        foreignField: "name",
-        as: "language",
-      },
-    },
-    { $unwind: "$language" },
-    {
-      $lookup: {
-        from: "words",
-        localField: "word_name",
-        foreignField: "word_name",
-        as: "word",
-      },
-    },
-    { $unwind: "$word" },
-    {
-      $match: {
-        $and: [
-          { word_name: req.params.word },
-          {
-            "language.macrofamily": { $in: ["Indo-European", "Afro-Asiatic"] },
-          },
-        ],
-      },
-    },
-    { $sort: { "language.family": 1 } },
-    {
-      $project: {
-        _id: 0,
-        etymology: 1,
-        gender: 1,
-        link: 1,
-        romanization: 1,
-        translation: 1,
-        id: "$_id",
-        name: "$language.name",
-        family: "$language.family",
-        macrofamily: "$language.macrofamily",
-      },
-    },
-  ])
+  //   Translation.aggregate([
+  //     {
+  //       $lookup: {
+  //         from: "languages",
+  //         localField: "language",
+  //         foreignField: "name",
+  //         as: "language",
+  //       },
+  //     },
+  //     { $unwind: "$language" },
+  //     {
+  //       $lookup: {
+  //         from: "words",
+  //         localField: "word_name",
+  //         foreignField: "word_name",
+  //         as: "word",
+  //       },
+  //     },
+  //     { $unwind: "$word" },
+  //     {
+  //       $match: {
+  //         $and: [
+  //           { word_name: req.params.word },
+  //           {
+  //             "language.macrofamily": { $in: ["Indo-European", "Afro-Asiatic"] },
+  //           },
+  //         ],
+  //       },
+  //     },
+  //     { $sort: { "language.family": 1 } },
+  //     {
+  //       $project: {
+  //         _id: 0,
+  //         etymology: 1,
+  //         gender: 1,
+  //         link: 1,
+  //         romanization: 1,
+  //         translation: 1,
+  //         id: "$_id",
+  //         name: "$language.name",
+  //         family: "$language.family",
+  //         macrofamily: "$language.macrofamily",
+  //       },
+  //     },
+  //   ])
+  Translation.finAllTranslationsByWordGender(req.params.word)
     .then((words) =>
       res.json({
         message: `Genders of ${req.params.word} successfully returned.`,
@@ -288,7 +331,7 @@ router.get("/search/gender/:word", (req, res) => {
 
 // DONE
 // find_etymology_containing
-// GET api/v1/languages/search/etymology/:word
+// GET api/v1/translations/search/etymology/:word
 // search translations by word containing an etymology
 // @access = public
 router.get("/search/etymology/:word", (req, res) => {
@@ -303,48 +346,49 @@ router.get("/search/etymology/:word", (req, res) => {
   //       $diacriticSensitive: false,
   //     },
   //   })
-  Translation.aggregate([
-    {
-      $match: {
-        $text: {
-          $search: req.params.word,
-        },
-      },
-    },
-    {
-      $lookup: {
-        from: "languages",
-        localField: "language",
-        foreignField: "name",
-        as: "language",
-      },
-    },
-    { $unwind: "$language" },
-    {
-      $lookup: {
-        from: "words",
-        localField: "word_name",
-        foreignField: "word_name",
-        as: "word",
-      },
-    },
-    { $unwind: "$word" },
-    {
-      $project: {
-        _id: 0,
-        id: "$_id",
-        etymology: 1,
-        gender: 1,
-        link: 1,
-        romanization: 1,
-        translation: 1,
-        word_name: 1,
-        name: "$language.name",
-        family: "$language.family",
-        macrofamily: "$language.macrofamily",
-      },
-    },
-  ])
+  //   Translation.aggregate([
+  //   {
+  //     $match: {
+  //       $text: {
+  //         $search: req.params.word,
+  //       },
+  //     },
+  //   },
+  //   {
+  //     $lookup: {
+  //       from: "languages",
+  //       localField: "language",
+  //       foreignField: "name",
+  //       as: "language",
+  //     },
+  //   },
+  //   { $unwind: "$language" },
+  //   {
+  //     $lookup: {
+  //       from: "words",
+  //       localField: "word_name",
+  //       foreignField: "word_name",
+  //       as: "word",
+  //     },
+  //   },
+  //   { $unwind: "$word" },
+  //   {
+  //     $project: {
+  //       _id: 0,
+  //       id: "$_id",
+  //       etymology: 1,
+  //       gender: 1,
+  //       link: 1,
+  //       romanization: 1,
+  //       translation: 1,
+  //       word_name: 1,
+  //       name: "$language.name",
+  //       family: "$language.family",
+  //       macrofamily: "$language.macrofamily",
+  //     },
+  //   },
+  //   ])
+  Translation.findEtymologyContaining(req.params.word)
     .then((translations) =>
       res.json({
         message: `Etymologies containing ${req.params.word} successfully returned.`,
@@ -365,41 +409,42 @@ router.get("/search/etymology/:word", (req, res) => {
 // search translations by macrofamily
 // @access = public
 router.get("/search/macrofamily/:macrofamily", (req, res) => {
-  Translation.aggregate([
-    {
-      $lookup: {
-        from: "languages",
-        localField: "language",
-        foreignField: "name",
-        as: "language",
-      },
-    },
-    { $unwind: "$language" },
-    {
-      $lookup: {
-        from: "words",
-        localField: "word_name",
-        foreignField: "word_name",
-        as: "word",
-      },
-    },
-    { $unwind: "$word" },
-    { $match: { "language.macrofamily": req.params.macrofamily } },
-    {
-      $project: {
-        _id: 0,
-        etymology: 1,
-        gender: 1,
-        link: 1,
-        romanization: 1,
-        translation: 1,
-        word_name: 1,
-        id: "$_id",
-        name: "$language.name",
-        family: "$language.family",
-      },
-    },
-  ])
+  //   Translation.aggregate([
+  //     {
+  //       $lookup: {
+  //         from: "languages",
+  //         localField: "language",
+  //         foreignField: "name",
+  //         as: "language",
+  //       },
+  //     },
+  //     { $unwind: "$language" },
+  //     {
+  //       $lookup: {
+  //         from: "words",
+  //         localField: "word_name",
+  //         foreignField: "word_name",
+  //         as: "word",
+  //       },
+  //     },
+  //     { $unwind: "$word" },
+  //     { $match: { "language.macrofamily": req.params.macrofamily } },
+  //     {
+  //       $project: {
+  //         _id: 0,
+  //         etymology: 1,
+  //         gender: 1,
+  //         link: 1,
+  //         romanization: 1,
+  //         translation: 1,
+  //         word_name: 1,
+  //         id: "$_id",
+  //         name: "$language.name",
+  //         family: "$language.family",
+  //       },
+  //     },
+  //   ])
+  Translation.findAllTranslationsByMacrofamily(req.params.macrofamily)
     .then((languages) =>
       res.json({
         message: `All Translations by macrofamily ${req.params.macrofamily} successfully returned.`,
@@ -420,41 +465,40 @@ router.get("/search/macrofamily/:macrofamily", (req, res) => {
 // search translations by language
 // @access = public
 router.get("/search/language/:language", (req, res) => {
-  Translation.aggregate([
-    {
-      $lookup: {
-        from: "languages",
-        localField: "language",
-        foreignField: "name",
-        as: "language",
-      },
-    },
-    { $unwind: "$language" },
-    {
-      $lookup: {
-        from: "words",
-        localField: "word_name",
-        foreignField: "word_name",
-        as: "word",
-      },
-    },
-    { $unwind: "$word" },
-    { $match: { "language.name": req.params.language } },
-    {
-      $project: {
-        _id: 0,
-        etymology: 1,
-        gender: 1,
-        link: 1,
-        romanization: 1,
-        translation: 1,
-        word_name: 1,
-        id: "$_id",
-        // name: "$language.name",
-        // family: "$language.family",
-      },
-    },
-  ])
+  //   Translation.aggregate([
+  //     {
+  //       $lookup: {
+  //         from: "languages",
+  //         localField: "language",
+  //         foreignField: "name",
+  //         as: "language",
+  //       },
+  //     },
+  //     { $unwind: "$language" },
+  //     {
+  //       $lookup: {
+  //         from: "words",
+  //         localField: "word_name",
+  //         foreignField: "word_name",
+  //         as: "word",
+  //       },
+  //     },
+  //     { $unwind: "$word" },
+  //     { $match: { "language.name": req.params.language } },
+  //     {
+  //       $project: {
+  //         _id: 0,
+  //         etymology: 1,
+  //         gender: 1,
+  //         link: 1,
+  //         romanization: 1,
+  //         translation: 1,
+  //         word_name: 1,
+  //         id: "$_id",
+  //       },
+  //     },
+  //   ])
+  Translation.findAllTranslationsByLanguage(req.params.language)
     .then((languages) =>
       res.json({
         message: `All Translations in ${req.params.language} successfully returned.`,
@@ -516,58 +560,59 @@ router.get("/get/seeds", (req, res) => {
 // search translation by area
 // @access = public
 router.get("/search/area/:area/:word", (req, res) => {
-  Translation.aggregate([
-    {
-      $lookup: {
-        from: "languages",
-        localField: "language",
-        foreignField: "name",
-        as: "language",
-      },
-    },
-    { $unwind: "$language" },
-    {
-      $lookup: {
-        from: "words",
-        localField: "word_name",
-        foreignField: "word_name",
-        as: "word",
-      },
-    },
-    { $unwind: "$word" },
-    {
-      $match: {
-        $and: [
-          { word_name: req.params.word },
-          {
-            $or: [
-              { "language.area1": req.params.area },
-              { "language.area2": req.params.area },
-              { "language.area3": req.params.area },
-            ],
-          },
-        ],
-      },
-    },
-    {
-      $project: {
-        _id: 0,
-        etymology: 1,
-        gender: 1,
-        link: 1,
-        romanization: 1,
-        translation: 1,
-        language: 1,
-        word_name: 1,
-        id: "$_id",
-        name: "$language.name",
-        family: "$language.family",
-        macrofamily: "$language.macrofamily",
-        subfamily: "$language.subfamily",
-        abbreviation: "$language.subfamily",
-      },
-    },
-  ])
+  //   Translation.aggregate([
+  //     {
+  //       $lookup: {
+  //         from: "languages",
+  //         localField: "language",
+  //         foreignField: "name",
+  //         as: "language",
+  //       },
+  //     },
+  //     { $unwind: "$language" },
+  //     {
+  //       $lookup: {
+  //         from: "words",
+  //         localField: "word_name",
+  //         foreignField: "word_name",
+  //         as: "word",
+  //       },
+  //     },
+  //     { $unwind: "$word" },
+  //     {
+  //       $match: {
+  //         $and: [
+  //           { word_name: req.params.word },
+  //           {
+  //             $or: [
+  //               { "language.area1": req.params.area },
+  //               { "language.area2": req.params.area },
+  //               { "language.area3": req.params.area },
+  //             ],
+  //           },
+  //         ],
+  //       },
+  //     },
+  //     {
+  //       $project: {
+  //         _id: 0,
+  //         etymology: 1,
+  //         gender: 1,
+  //         link: 1,
+  //         romanization: 1,
+  //         translation: 1,
+  //         language: 1,
+  //         word_name: 1,
+  //         id: "$_id",
+  //         name: "$language.name",
+  //         family: "$language.family",
+  //         macrofamily: "$language.macrofamily",
+  //         subfamily: "$language.subfamily",
+  //         abbreviation: "$language.subfamily",
+  //       },
+  //     },
+  //   ])
+  Translation.findAllTranslationsByArea(req.params.area, req.params.word)
     .then((translations) =>
       res.json({
         message: `All Translations of ${req.params.word} in ${req.params.area} successfully returned.`,
@@ -589,65 +634,66 @@ router.get("/search/area/:area/:word", (req, res) => {
 // @access = public
 router.get("/search/area_europe_map/:area/:word", (req, res) => {
   //prettier-ignore
-  const myEuropeSvg = ["ab", "ar", "az", "be", "bg", "br", "ca", "co", "cs", "cy", "da", "de", "el", "en", "es", "et", "eu", "fi", "fo", "fr", "fy", "ga", "gag", "gd", "gl", "hu", "hy", "is", "it", "ka", "kk", "krl", "lb", "lij", "lt", "lv", "mk", "mt", "nap", "nl", "no", "oc", "os", "pl", "pms", "pt", "rm", "ro", "ru", "sc", "scn", "sco", "se", "sh", "sk", "sl", "sq", "sv", "tk", "tt", "uk", "vnc", "xal"];
-  Translation.aggregate([
-    {
-      $lookup: {
-        from: "languages",
-        localField: "language",
-        foreignField: "name",
-        as: "language",
-      },
-    },
-    { $unwind: "$language" },
-    {
-      $lookup: {
-        from: "words",
-        localField: "word_name",
-        foreignField: "word_name",
-        as: "word",
-      },
-    },
-    { $unwind: "$word" },
-    {
-      $match: {
-        $and: [
-          { word_name: req.params.word },
-          {
-            $or: [
-              { "language.area1": req.params.area },
-              { "language.area2": req.params.area },
-              { "language.area3": req.params.area },
-            ],
-          },
-        ],
-      },
-    },
-    {
-      $sort: {
-        "language.macrofamily": 1,
-        "language.family": 1,
-        "language.subfamily": 1,
-      },
-    },
-    {
-      $project: {
-        _id: 0,
-        etymology: 1,
-        gender: 1,
-        link: 1,
-        romanization: 1,
-        translation: 1,
-        language: 1,
-        word_name: 1,
-        id: "$_id",
-        name: "$language.name",
-        family: "$language.family",
-        macrofamily: "$language.macrofamily",
-        subfamily: "$language.subfamily",
-      },
-    },
-  ])
+  //   const myEuropeSvg = ["ab", "ar", "az", "be", "bg", "br", "ca", "co", "cs", "cy", "da", "de", "el", "en", "es", "et", "eu", "fi", "fo", "fr", "fy", "ga", "gag", "gd", "gl", "hu", "hy", "is", "it", "ka", "kk", "krl", "lb", "lij", "lt", "lv", "mk", "mt", "nap", "nl", "no", "oc", "os", "pl", "pms", "pt", "rm", "ro", "ru", "sc", "scn", "sco", "se", "sh", "sk", "sl", "sq", "sv", "tk", "tt", "uk", "vnc", "xal"];
+  //   Translation.aggregate([
+  //     {
+  //       $lookup: {
+  //         from: "languages",
+  //         localField: "language",
+  //         foreignField: "name",
+  //         as: "language",
+  //       },
+  //     },
+  //     { $unwind: "$language" },
+  //     {
+  //       $lookup: {
+  //         from: "words",
+  //         localField: "word_name",
+  //         foreignField: "word_name",
+  //         as: "word",
+  //       },
+  //     },
+  //     { $unwind: "$word" },
+  //     {
+  //       $match: {
+  //         $and: [
+  //           { word_name: req.params.word },
+  //           {
+  //             $or: [
+  //               { "language.area1": req.params.area },
+  //               { "language.area2": req.params.area },
+  //               { "language.area3": req.params.area },
+  //             ],
+  //           },
+  //         ],
+  //       },
+  //     },
+  //     {
+  //       $sort: {
+  //         "language.macrofamily": 1,
+  //         "language.family": 1,
+  //         "language.subfamily": 1,
+  //       },
+  //     },
+  //     {
+  //       $project: {
+  //         _id: 0,
+  //         etymology: 1,
+  //         gender: 1,
+  //         link: 1,
+  //         romanization: 1,
+  //         translation: 1,
+  //         language: 1,
+  //         word_name: 1,
+  //         id: "$_id",
+  //         name: "$language.name",
+  //         family: "$language.family",
+  //         macrofamily: "$language.macrofamily",
+  //         subfamily: "$language.subfamily",
+  //       },
+  //     },
+  //   ])
+  Translation.findAllTranslationsByAreaEuropeMap(req.params.area, req.params.word)
     .then((translations) =>
       res.json({
         message: `All Translations of ${req.params.word} in ${req.params.area} successfully returned.`,
@@ -670,149 +716,148 @@ router.get("/search/area_europe_map/:area/:word", (req, res) => {
 // search translation by area and from the europe map by TRANSLATION
 // @access = public
 router.get("/search/all_translations_by_area_img/:area/:word", (req, res) => {
-  console.log("\n");
-  console.log("all_translations_by_area_img fires");
-  Translation.aggregate([
-    {
-      $lookup: {
-        from: "languages",
-        localField: "language",
-        foreignField: "name",
-        as: "language",
-      },
-    },
-    { $unwind: "$language" },
-    {
-      $lookup: {
-        from: "words",
-        localField: "word_name",
-        foreignField: "word_name",
-        as: "word",
-      },
-    },
-    { $unwind: "$word" },
-    {
-      $match: {
-        $and: [
-          { word_name: req.params.word },
-          {
-            $or: [
-              { "language.area1": req.params.area },
-              { "language.area2": req.params.area },
-              { "language.area3": req.params.area },
-            ],
-          },
-        ],
-      },
-    },
-    {
-      $project: {
-        _id: 0,
-        id: "$_id",
-        etymology: 1,
-        gender: 1,
-        link: 1,
-        romanization: 1,
-        translation: 1,
-        language: {
-          abbreviation: 1,
-          alphabet: 1,
-          macrofamily: 1,
-          family: 1,
-          subfamily: 1,
-          area1: 1,
-          area2: 1,
-          area3: 1,
-          notes: 1,
-          alive: 1,
-        },
-        word: {
-          word_name: 1,
-          definition: 1,
-        },
-      },
-    },
-  ])
-    .then((search) => {
-      const searchResults = [...search];
-      let resultArray = [];
-      let currentLanguages = [];
-      let mapLanguages = [];
+  //   Translation.aggregate([
+  //     {
+  //       $lookup: {
+  //         from: "languages",
+  //         localField: "language",
+  //         foreignField: "name",
+  //         as: "language",
+  //       },
+  //     },
+  //     { $unwind: "$language" },
+  //     {
+  //       $lookup: {
+  //         from: "words",
+  //         localField: "word_name",
+  //         foreignField: "word_name",
+  //         as: "word",
+  //       },
+  //     },
+  //     { $unwind: "$word" },
+  //     {
+  //       $match: {
+  //         $and: [
+  //           { word_name: req.params.word },
+  //           {
+  //             $or: [
+  //               { "language.area1": req.params.area },
+  //               { "language.area2": req.params.area },
+  //               { "language.area3": req.params.area },
+  //             ],
+  //           },
+  //         ],
+  //       },
+  //     },
+  //     {
+  //       $project: {
+  //         _id: 0,
+  //         id: "$_id",
+  //         etymology: 1,
+  //         gender: 1,
+  //         link: 1,
+  //         romanization: 1,
+  //         translation: 1,
+  //         language: {
+  //           abbreviation: 1,
+  //           alphabet: 1,
+  //           macrofamily: 1,
+  //           family: 1,
+  //           subfamily: 1,
+  //           area1: 1,
+  //           area2: 1,
+  //           area3: 1,
+  //           notes: 1,
+  //           alive: 1,
+  //         },
+  //         word: {
+  //           word_name: 1,
+  //           definition: 1,
+  //         },
+  //       },
+  //     },
+  //   ])
+  Translation.findAllTranslationsByAreaImg(req.params.area, req.params.word)
+    // .then((search) => {
+    //   const searchResults = [...search];
+    //   let resultArray = [];
+    //   let currentLanguages = [];
+    //   let mapLanguages = [];
 
-      fs.readFile(
-        path.join(__dirname, "../../../images/my_europe_template.svg"),
-        (err, data) => {
-          if (err) throw err;
-          let info = data.toString();
-          const $ = cheerio.load(info, {
-            normalizeWhitespace: true,
-            xmlMode: true,
-          });
-          let langs = $("tspan");
-          langs.each(function (i, el) {
-            const lang = $(el).text();
-            if (lang) {
-              mapLanguages.push(lang.split("$")[1]);
-            }
-          });
-          for (let result of searchResults) {
-            if (!mapLanguages.includes(result.language.abbreviation)) {
-              continue;
-            }
-            resultArray.push(romanizationHelper(result));
-            currentLanguages.push(result.language.abbreviation);
-          }
+    //   fs.readFile(
+    //     path.join(__dirname, "../../../images/my_europe_template.svg"),
+    //     (err, data) => {
+    //       if (err) throw err;
+    //       let info = data.toString();
+    //       const $ = cheerio.load(info, {
+    //         normalizeWhitespace: true,
+    //         xmlMode: true,
+    //       });
+    //       let langs = $("tspan");
+    //       langs.each(function (i, el) {
+    //         const lang = $(el).text();
+    //         if (lang) {
+    //           mapLanguages.push(lang.split("$")[1]);
+    //         }
+    //       });
+    //       for (let result of searchResults) {
+    //         if (!mapLanguages.includes(result.language.abbreviation)) {
+    //           continue;
+    //         }
+    //         resultArray.push(romanizationHelper(result));
+    //         currentLanguages.push(result.language.abbreviation);
+    //       }
 
-          let unusedMapLanguages = [];
-          mapLanguages.forEach((mapLang) => {
-            if (!currentLanguages.includes(mapLang)) {
-              unusedMapLanguages.push(mapLang);
-            }
-          });
+    //       let unusedMapLanguages = [];
+    //       mapLanguages.forEach((mapLang) => {
+    //         if (!currentLanguages.includes(mapLang)) {
+    //           unusedMapLanguages.push(mapLang);
+    //         }
+    //       });
 
-          unusedMapLanguages.forEach((unusedLang) => {
-            info = info.replace("$" + unusedLang, "");
-          });
+    //       unusedMapLanguages.forEach((unusedLang) => {
+    //         info = info.replace("$" + unusedLang, "");
+    //       });
 
-          resultArray.forEach((language) => {
-            info = info.replace(
-              "$" + language["abbreviation"],
-              language["translation"]
-            );
-          });
+    //       resultArray.forEach((language) => {
+    //         info = info.replace(
+    //           "$" + language["abbreviation"],
+    //           language["translation"]
+    //         );
+    //       });
 
-          console.log("writeFile fires");
-          fs.writeFileSync(
-            path.join(__dirname, "../../../images/my_europe_template_copy.svg"),
-            info,
-            function (err, result) {
-              if (err) throw err;
-              console.log("typeof result=", typeof result);
-            }
-          );
-          console.log("file saved.");
-          console.log("sendFile fires");
-          const options = {
-            headers: {
-              "Content-Type": "image/svg+xml",
-              "x-timestamp": Date.now(),
-            },
-          };
-          //   res.setHeader("Content-Type", "image/svg+xml");
-          res.sendFile(
-            path.join(__dirname, "../../../images/my_europe_template_copy.svg"),
-            options,
-            (err) => {
-              if (err) {
-                console.log("Err=", err);
-              } else {
-                console.log("file sent");
-              }
-            }
-          );
-        }
-      );
-    })
+    //       console.log("writeFile fires");
+    //       fs.writeFileSync(
+    //         path.join(__dirname, "../../../images/my_europe_template_copy.svg"),
+    //         info,
+    //         function (err, result) {
+    //           if (err) throw err;
+    //           console.log("typeof result=", typeof result);
+    //         }
+    //       );
+    //       console.log("file saved.");
+    //       console.log("sendFile fires");
+    //       const options = {
+    //         headers: {
+    //           "Content-Type": "image/svg+xml",
+    //           "x-timestamp": Date.now(),
+    //         },
+    //       };
+    //       //   res.setHeader("Content-Type", "image/svg+xml");
+    //       res.sendFile(
+    //         path.join(__dirname, "../../../images/my_europe_template_copy.svg"),
+    //         options,
+    //         (err) => {
+    //           if (err) {
+    //             console.log("Err=", err);
+    //           } else {
+    //             console.log("file sent");
+    //           }
+    //         }
+    //       );
+    //     }
+    //   );
+    // })
     // .then(() => {
     //   res.setHeader("Content-Type", "image/svg+xml");
     //   res.sendFile(
@@ -904,67 +949,68 @@ router.get("/search/all_genders_by_area_img/:area/:word", (req, res) => {
         ["xal", "d34d5f"],
       ]
 
-  Translation.aggregate([
-    {
-      $lookup: {
-        from: "languages",
-        localField: "language",
-        foreignField: "name",
-        as: "language",
-      },
-    },
-    { $unwind: "$language" },
-    {
-      $lookup: {
-        from: "words",
-        localField: "word_name",
-        foreignField: "word_name",
-        as: "word",
-      },
-    },
-    { $unwind: "$word" },
-    {
-      $match: {
-        $and: [
-          { word_name: req.params.word },
-          {
-            $or: [
-              { "language.area1": req.params.area },
-              { "language.area2": req.params.area },
-              { "language.area3": req.params.area },
-            ],
-          },
-        ],
-      },
-    },
-    {
-      $project: {
-        _id: 0,
-        id: "$_id",
-        etymology: 1,
-        gender: 1,
-        link: 1,
-        romanization: 1,
-        translation: 1,
-        language: {
-          abbreviation: 1,
-          alphabet: 1,
-          macrofamily: 1,
-          family: 1,
-          subfamily: 1,
-          area1: 1,
-          area2: 1,
-          area3: 1,
-          notes: 1,
-          alive: 1,
-        },
-        word: {
-          word_name: 1,
-          definition: 1,
-        },
-      },
-    },
-  ])
+  //   Translation.aggregate([
+  //     {
+  //       $lookup: {
+  //         from: "languages",
+  //         localField: "language",
+  //         foreignField: "name",
+  //         as: "language",
+  //       },
+  //     },
+  //     { $unwind: "$language" },
+  //     {
+  //       $lookup: {
+  //         from: "words",
+  //         localField: "word_name",
+  //         foreignField: "word_name",
+  //         as: "word",
+  //       },
+  //     },
+  //     { $unwind: "$word" },
+  //     {
+  //       $match: {
+  //         $and: [
+  //           { word_name: req.params.word },
+  //           {
+  //             $or: [
+  //               { "language.area1": req.params.area },
+  //               { "language.area2": req.params.area },
+  //               { "language.area3": req.params.area },
+  //             ],
+  //           },
+  //         ],
+  //       },
+  //     },
+  //     {
+  //       $project: {
+  //         _id: 0,
+  //         id: "$_id",
+  //         etymology: 1,
+  //         gender: 1,
+  //         link: 1,
+  //         romanization: 1,
+  //         translation: 1,
+  //         language: {
+  //           abbreviation: 1,
+  //           alphabet: 1,
+  //           macrofamily: 1,
+  //           family: 1,
+  //           subfamily: 1,
+  //           area1: 1,
+  //           area2: 1,
+  //           area3: 1,
+  //           notes: 1,
+  //           alive: 1,
+  //         },
+  //         word: {
+  //           word_name: 1,
+  //           definition: 1,
+  //         },
+  //       },
+  //     },
+  //   ])
+  Translation.findAllGendersByAreaImg(req.params.area, req.params.word)
     .then((search) => {
       const searchResults = [...search];
       // the languages on the default map
@@ -976,7 +1022,7 @@ router.get("/search/all_genders_by_area_img/:area/:word", (req, res) => {
       // the results of transforming the data
       let resultArray = [];
 
-      // the current langauges in the results
+      // the current languages in the results
       let currentLanguages = [];
 
       // the current languages on the map.
@@ -1229,67 +1275,68 @@ router.get("/search/all_etymologies_by_area_img/:area/:word", (req, res) => {
           ["xal", "d34d5f"],
         ]
 
-  Translation.aggregate([
-    {
-      $lookup: {
-        from: "languages",
-        localField: "language",
-        foreignField: "name",
-        as: "language",
-      },
-    },
-    { $unwind: "$language" },
-    {
-      $lookup: {
-        from: "words",
-        localField: "word_name",
-        foreignField: "word_name",
-        as: "word",
-      },
-    },
-    { $unwind: "$word" },
-    {
-      $match: {
-        $and: [
-          { word_name: req.params.word },
-          {
-            $or: [
-              { "language.area1": req.params.area },
-              { "language.area2": req.params.area },
-              { "language.area3": req.params.area },
-            ],
-          },
-        ],
-      },
-    },
-    {
-      $project: {
-        _id: 0,
-        id: "$_id",
-        etymology: 1,
-        gender: 1,
-        link: 1,
-        romanization: 1,
-        translation: 1,
-        language: {
-          abbreviation: 1,
-          alphabet: 1,
-          macrofamily: 1,
-          family: 1,
-          subfamily: 1,
-          area1: 1,
-          area2: 1,
-          area3: 1,
-          notes: 1,
-          alive: 1,
-        },
-        word: {
-          word_name: 1,
-          definition: 1,
-        },
-      },
-    },
-  ])
+  //   Translation.aggregate([
+  //     {
+  //       $lookup: {
+  //         from: "languages",
+  //         localField: "language",
+  //         foreignField: "name",
+  //         as: "language",
+  //       },
+  //     },
+  //     { $unwind: "$language" },
+  //     {
+  //       $lookup: {
+  //         from: "words",
+  //         localField: "word_name",
+  //         foreignField: "word_name",
+  //         as: "word",
+  //       },
+  //     },
+  //     { $unwind: "$word" },
+  //     {
+  //       $match: {
+  //         $and: [
+  //           { word_name: req.params.word },
+  //           {
+  //             $or: [
+  //               { "language.area1": req.params.area },
+  //               { "language.area2": req.params.area },
+  //               { "language.area3": req.params.area },
+  //             ],
+  //           },
+  //         ],
+  //       },
+  //     },
+  //     {
+  //       $project: {
+  //         _id: 0,
+  //         id: "$_id",
+  //         etymology: 1,
+  //         gender: 1,
+  //         link: 1,
+  //         romanization: 1,
+  //         translation: 1,
+  //         language: {
+  //           abbreviation: 1,
+  //           alphabet: 1,
+  //           macrofamily: 1,
+  //           family: 1,
+  //           subfamily: 1,
+  //           area1: 1,
+  //           area2: 1,
+  //           area3: 1,
+  //           notes: 1,
+  //           alive: 1,
+  //         },
+  //         word: {
+  //           word_name: 1,
+  //           definition: 1,
+  //         },
+  //       },
+  //     },
+  //   ])
+  Translation.findAllEtymologiesByAreaImg(req.params.area, req.params.word)
     .then((search) => {
       const searchResults = [...search];
       //  the languages on the default map
@@ -1301,7 +1348,7 @@ router.get("/search/all_etymologies_by_area_img/:area/:word", (req, res) => {
       // the results of transforming the data
       let resultArray = [];
 
-      // the current langauges in the results
+      // the current languages in the results
       let currentLanguages = [];
 
       // the current languages on the map.
