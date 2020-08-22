@@ -16,21 +16,11 @@ const WordSchema = new Schema(
 );
 
 WordSchema.statics.allWordNames = function () {
-  //   const allWordNamesProject = {
-  //     _id: 0,
-  //     id: "$_id",
-  //     word_name: 1,
-  //   };
-  // WordSchema.statics.wordsCount = function () {
-  //   return mongoose.model("Word").countDocuments();
-  // };
   return mongoose.model("Word").aggregate([
-    // { $match: { word_name: {} } },
     {
       $project: {
-        // _id: 0,
-        // id: "$_id",
-        _id: 1,
+        _id: 0,
+        id: "$_id",
         word_name: 1,
       },
     },

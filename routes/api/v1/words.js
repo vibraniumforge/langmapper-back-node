@@ -9,10 +9,10 @@ const ObjectId = Mongoose.Types.ObjectId;
 // @access = public
 router.get("/", (req, res) => {
   Word.aggregate([
+    { $sort: { _id: 1 } },
     { $project: { _id: 0, id: "$_id", word_name: 1, definition: 1 } },
   ])
-    .sort({ date: 1 })
-    .then((words) => res.json(words))
+    .then((words) => res.status(200).json(words))
     .catch((err) => {
       console.log(err);
       res.status(404).json({ success: false, error: err });
@@ -35,12 +35,12 @@ router.get("/:id([0-9a-fA-F]{24})", (req, res) => {
     },
   ])
     .then((word) => {
-      const message = {
+      const response = {
         success: true,
         message: `Word ${req.params.id} found.`,
         data: word[0],
       };
-      res.status(200).json(message);
+      res.status(200).json(response);
     })
     .catch((err) => {
       console.log(err);
@@ -58,13 +58,14 @@ router.post("/", (req, res) => {
   });
   newWord
     .save()
-    .then(
-      res.status(200).json({
+    .then(() => {
+      const response = {
         success: true,
         message: `Word ${req.body.word.word_name} created.`,
         data: newWord,
-      })
-    )
+      };
+      res.status(200).json(response);
+    })
     .catch((err) => {
       console.log(err);
       res.status(404).json({ success: false, error: err });
@@ -88,12 +89,12 @@ router.patch("/:id", (req, res) => {
     }
   )
     .then((word) => {
-      const message = {
+      const response = {
         message: `Word ${req.params.id} updated.`,
         success: true,
         data: word,
       };
-      res.status(200).json(message);
+      res.status(200).json(response);
     })
     .catch((err) => {
       console.log(err);
@@ -111,9 +112,13 @@ router.patch("/:id", (req, res) => {
 router.delete("/:id", (req, res) => {
   Word.findById(req.params.id)
     .then((word) => word.remove())
-    .then(() =>
-      res.json({ message: `Word ${req.params.id} deleted.`, success: true })
-    )
+    .then(() => {
+      const response = {
+        message: `Word ${req.params.id} deleted.`,
+        success: true,
+      };
+      res.status(200).json(response);
+    })
     .catch((err) => res.status(404).json({ success: false, error: err }));
 });
 
@@ -123,23 +128,21 @@ router.delete("/:id", (req, res) => {
 // get all word names
 // @access = public
 router.get("/get/word_names", (req, res) => {
+  //   Word.find()
+  //     .sort({ word_name: 1 })
+  // .then((words) =>
+  //   words.map((word) => {
+  //     return { id: word._id, word_name: word.word_name };
+  //   })
+  // )
   Word.allWordNames()
-    //   Word.find()
-    //     .sort({ word_name: 1 })
-    .then((words) =>
-      words.map((word) => {
-        return { id: word._id, word_name: word.word_name };
-      })
-    )
     .then((words) => {
-      //   console.log(words);
       const response = {
         message: "All Word names successfully returned.",
         success: true,
         data: words,
       };
-      //   console.log(response);
-      res.json(response);
+      res.status(200).json(response);
     })
     .catch((err) => {
       console.log(err);
@@ -160,7 +163,6 @@ router.get("/get/words_count", (req, res) => {
         success: true,
         data: count,
       };
-      console.log(response);
       res.status(200).json(response);
     })
     .catch((err) => {
