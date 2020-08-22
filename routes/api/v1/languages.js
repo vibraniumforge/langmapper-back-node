@@ -27,7 +27,6 @@ router.get("/", (req, res) => {
       },
     },
   ])
-    .sort({ date: 1 })
     .then((languages) => res.json(languages))
     .catch((err) => {
       console.log(err);
@@ -123,20 +122,14 @@ router.patch("/:id", (req, res) => {
       new: true,
     }
   )
-    .then(
-      res.status(200).json({
+    .then((response) => {
+      const message = {
         message: `Language ${req.params.id} updated.`,
         success: true,
-        // data: newLanguage,
-      })
-    )
-    .then(
-      console.log({
-        message: `Language ${req.params.id} updated.`,
-        success: true,
-        // data: newLanguage,
-      })
-    )
+        data: response,
+      };
+      res.status(200).json({ message });
+    })
     .catch((err) => {
       console.log(err);
       res.status(404).json({
@@ -171,7 +164,6 @@ router.delete("/:id", (req, res) => {
 // @access = public
 router.get("/get/macrofamily_names", (req, res) => {
   Language.distinct("macrofamily")
-    // .sort({ word_name: 1 })
     .then((macrofamiles) =>
       res.json({
         message: "All Macrofamily names successfully returned.",
@@ -249,36 +241,62 @@ router.get("/get/area_names", (req, res) => {
   //     },
   //   ])
 
-  let allAreas = [];
-  Language.distinct("area1").then((areas) =>
-    areas.forEach((area) => {
-      if (area && !allAreas.includes(area)) {
-        allAreas.push(area);
-      }
-    })
-  );
-  Language.distinct("area2").then((areas) =>
-    areas.forEach((area) => {
-      if (area && !allAreas.includes(area)) {
-        allAreas.push(area);
-      }
-    })
-  );
-  Language.distinct("area3")
-    .then((areas) =>
-      areas.forEach((area) => {
-        if (area && !allAreas.includes(area)) {
-          allAreas.push(area);
-        }
-      })
-    )
-    .then(() => {
-      res.json({
+  //   let allAreas = [];
+  //   Language.distinct("area1").then((areas) =>
+  //     areas.forEach((area) => {
+  //       if (area && !allAreas.includes(area)) {
+  //         allAreas.push(area);
+  //       }
+  //     })
+  //   );
+  //   Language.distinct("area2").then((areas) =>
+  //     areas.forEach((area) => {
+  //       if (area && !allAreas.includes(area)) {
+  //         allAreas.push(area);
+  //       }
+  //     })
+  //   );
+  //   Language.distinct("area3")
+  //     .then((areas) =>
+  //       areas.forEach((area) => {
+  //         if (area && !allAreas.includes(area)) {
+  //           allAreas.push(area);
+  //         }
+  //       })
+  //     )
+  Language.aggregate([
+    // {
+    //   $match: {
+    //     area1: { $not: { $eq: "" } },
+    //     area2: { $not: { $eq: "" } },
+    //     area3: { $not: { $eq: "" } },
+    //   },
+    // },
+    {
+      $group: {
+        _id: null,
+        area1: { $addToSet: "$area1" },
+        area2: { $addToSet: "$area2" },
+        area3: { $addToSet: "$area3" },
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        areas: { $setUnion: ["$area1", "$area2", "$area3"] },
+      },
+    },
+    { $sort: { areas: 1 } },
+  ])
+    .then((results) => {
+      console.log(results[0]["areas"]);
+      const message = {
         message: "All Language area names successfully returned.",
         success: true,
-        count: allAreas.length,
-        data: allAreas.sort(),
-      });
+        count: results[0]["areas"].length,
+        data: results[0]["areas"],
+      };
+      res.status(200).json(message);
     })
     .catch((err) => {
       console.log(err);
@@ -292,34 +310,6 @@ router.get("/get/area_names", (req, res) => {
 // @access = public
 router.get("/search/area/:area", (req, res) => {
   Language.findLanguagesByArea(req.params.area)
-    //   Language.aggregate([
-    //     {
-    //       $match: {
-    //         $or: [
-    //           { area1: req.params.area },
-    //           { area2: req.params.area },
-    //           { area3: req.params.area },
-    //         ],
-    //       },
-    //     },
-    //     {
-    //       $project: {
-    //         _id: 0,
-    //         id: "$_id",
-    //         name: 1,
-    //         abbreviation: 1,
-    //         alphabet: 1,
-    //         macrofamily: 1,
-    //         family: 1,
-    //         subfamily: 1,
-    //         area1: 1,
-    //         area2: 1,
-    //         area3: 1,
-    //         notes: 1,
-    //         alive: 1,
-    //       },
-    //     },
-    //   ])
     .then((languages) =>
       res.json({
         message: `All Languages in ${req.params.area} successfully returned.`,
