@@ -708,7 +708,7 @@ router.get("/search/area_europe_map/:area/:word", (req, res) => {
     });
 });
 
-// MAPPERS
+// MAPPERS --------------------
 
 // DONE
 // find_all_translations_by_area_img
@@ -1202,6 +1202,7 @@ router.get("/search/all_genders_by_area_img/:area/:word", (req, res) => {
 // search translations by area from the europe map by ETYMOLOGY
 // @access = public
 router.get("/search/all_etymologies_by_area_img/:area/:word", (req, res) => {
+  const t1 = Date.now();
   console.log("\n");
   console.log("all_ETYMOLOGIES_by_area_img FIRES");
   console.log("req.params.area=", req.params.area);
@@ -1393,7 +1394,7 @@ router.get("/search/all_etymologies_by_area_img/:area/:word", (req, res) => {
           // build the result array
 
           //prettier-ignore
-          const removeWords = ["ultimately", "derived", "borrowed", "shortened", "by", "metathesis", "both", "all", "the", "voiced", "verner", "alternant", "classical", "with", "change", "of", "ending", "itself", "probably", "later", "vulgar", "a", "modification", "root", "or"]
+          const removeWords = ["ultimately", "derived", "borrowed", "shortened", "by", "metathesis", "both", "all", "the", "voiced", "verner", "alternant", "classical", "with", "change", "of", "ending", "itself", "probably", "later", "late", "vulgar", "a", "modification", "root", "or", "borrowing", "learned", "semi-learned", "conflation", "via", "taken", "either", "regularized", "regularised", "form", "medieval", "diminutive", "variant", "through", "prothesis", "literary", "taken", "reformation", "inherited", "feminine", "masculine", "hypothetical", "reborrowing", "plural"]
           //prettier-ignore
           const familiesList = ["Albanian", "Anatolian", "Armenian", "Ancient Greek", "Hellenic", "Latin", "Proto-Balto‑Slavic", "Proto-Slavic", "Proto-Baltic", "Proto-Celtic", "Proto-Germanic", "Proto-Indo-Iranian", "Proto-Tocharian", "Proto-Finnic", "Proto-Sami", "Proto-Ugric", "Proto-Basque", "Proto-Turkic", "Proto-Afro-Asiatic" , "Semitic", "Arabic", "Proto-Kartvelian", "Proto-Northwest Caucasian", "Proto-Northeast Caucasian" ]
 
@@ -1538,6 +1539,7 @@ router.get("/search/all_etymologies_by_area_img/:area/:word", (req, res) => {
             }
           }
 
+          //   handle missing regional colors
           const italianIndex = resultArray.findIndex((item) => {
             return item.abbreviation === "it";
           });
@@ -1601,14 +1603,47 @@ router.get("/search/all_etymologies_by_area_img/:area/:word", (req, res) => {
             const newRegex = new RegExp(replaceColor, "g");
             info = info.replace(newRegex, "#" + result["color"]);
           });
-          //   console.log("\n");
+
+          const searchResultLanguageArray = searchResults.map(
+            (result) => result.language.abbreviation
+          );
+          const unusedSearchResults = mapLanguages.filter(
+            (lang) => !searchResultLanguageArray.includes(lang)
+          );
+          const unusedMapLanguages2 = searchResultLanguageArray.filter(
+            (lang) => !mapLanguages.includes(lang)
+          );
+
+          console.log("etymologyArray=", etymologyArray);
+
+          console.log("\n");
           console.log(
-            `${searchResults.length} matching languages in the DB for the word: ${req.params.word} in: ${req.params.area}`
+            `${
+              searchResults.length
+            } matching languages in the DB for the word: ${req.params.word.toUpperCase()} in: ${
+              req.params.area
+            }`
           );
           console.log(`${mapLanguages.length} languages on the map`);
-          console.log(`${unusedMapLanguages.length} unused languages`);
+          console.log(
+            `${unusedMapLanguages.length} unused languages(on map, but not in DB or no etymology`
+          );
           console.log(unusedMapLanguages.sort());
-          console.log(`${currentLanguages.length} languages displayed`);
+          console.log("\n");
+          console.log(
+            `${unusedSearchResults.length} unused languages(on map, but not in DB`
+          );
+          console.log(unusedSearchResults.sort());
+          console.log("\n");
+          console.log(
+            `${unusedMapLanguages2.length} unused search languages(in search results, but not on map`
+          );
+          if (unusedMapLanguages2.length > 0) {
+            console.log(unusedMapLanguages2.sort());
+          }
+          console.log("\n");
+
+          console.log(`${currentLanguages.length} languages in DB and map`);
           console.log(`${etymologyArray.length} <== unique etymologies`);
           //   console.log("myEuropeSvg=", myEuropeSvg);
           //   console.log("mapLanguages=", mapLanguages.sort());
@@ -1616,11 +1651,13 @@ router.get("/search/all_etymologies_by_area_img/:area/:word", (req, res) => {
           //     "mapLanguages.length===myEuropeSvg.length",
           //     mapLanguages.length === myEuropeSvg.length
           //   );
-          console.log(
-            `${
-              myEuropeSvg.length - mapLanguages.length
-            } languages missing between the two arrays`
-          );
+          //   console.log(
+          //     `${
+          //       myEuropeSvg.length - mapLanguages.length
+          //     } languages missing between the two arrays`
+          //   );
+          console.log("\n");
+          console.log(`computed in ${Date.now() - t1} seconds.`);
           console.log("\n");
           fs.writeFileSync(
             path.join(__dirname, "../../../images/my_europe_template_copy.svg"),
@@ -1723,6 +1760,7 @@ router.get("/search/all_etymologies_by_area_img/:area/:word", (req, res) => {
     });
 });
 // 529 lines v1
+// 565 lines v2
 
 //  Appends romanization if not the same as translation
 //  example [nl, water], ["uk", "мідь - midʹ"]
@@ -1784,9 +1822,11 @@ module.exports = router;
 // [x]translations_count
 // [x]seeds
 
-// # Mappers
+// Mappers
 // [x]find_all_translations_by_area_europe_map
 // [x]find_all_translations_by_area_img
 // [x]find_all_genders_by_area_img
 // [x]find_all_etymologies_by_area_img
+
+// Getters
 // []find info
