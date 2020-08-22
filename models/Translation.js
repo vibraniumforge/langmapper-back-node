@@ -426,6 +426,13 @@ TranslationSchema.statics.findAllTranslationsByArea = function (area, word) {
       },
     },
     {
+      $sort: {
+        "language.macrofamily": 1,
+        "language.family": 1,
+        "language.subfamily": 1,
+      },
+    },
+    {
       $project: {
         _id: 0,
         etymology: 1,
@@ -485,6 +492,13 @@ TranslationSchema.statics.findAllTranslationsByAreaEuropeMap = function (
       },
     },
     {
+      $sort: {
+        "language.macrofamily": 1,
+        "language.family": 1,
+        "language.subfamily": 1,
+      },
+    },
+    {
       $project: {
         _id: 0,
         etymology: 1,
@@ -513,148 +527,141 @@ TranslationSchema.statics.findAllTranslationsByAreaEuropeMap = function (
 // GET api/v1/translations/search/all_translations_by_area_img/:area/:word
 // search translation by area and from the europe map by TRANSLATION
 // @access = public
-TranslationSchema.statics.findAllTranslationsByAreaImg = async function (
-  area,
-  word
-) {
-  try {
-    const searchResults = await mongoose.model("Translation").aggregate([
-      {
-        $lookup: {
-          from: "languages",
-          localField: "language",
-          foreignField: "name",
-          as: "language",
-        },
+TranslationSchema.statics.findAllTranslationsByAreaImg = function (area, word) {
+  return mongoose.model("Translation").aggregate([
+    {
+      $lookup: {
+        from: "languages",
+        localField: "language",
+        foreignField: "name",
+        as: "language",
       },
-      { $unwind: "$language" },
-      {
-        $lookup: {
-          from: "words",
-          localField: "word_name",
-          foreignField: "word_name",
-          as: "word",
-        },
+    },
+    { $unwind: "$language" },
+    {
+      $lookup: {
+        from: "words",
+        localField: "word_name",
+        foreignField: "word_name",
+        as: "word",
       },
-      { $unwind: "$word" },
-      {
-        $match: {
-          $and: [
-            { word_name: word },
-            {
-              $or: [
-                { "language.area1": area },
-                { "language.area2": area },
-                { "language.area3": area },
-              ],
-            },
-          ],
-        },
+    },
+    { $unwind: "$word" },
+    {
+      $match: {
+        $and: [
+          { word_name: word },
+          {
+            $or: [
+              { "language.area1": area },
+              { "language.area2": area },
+              { "language.area3": area },
+            ],
+          },
+        ],
       },
-      {
-        $project: {
-          _id: 0,
-          etymology: 1,
-          gender: 1,
-          link: 1,
-          romanization: 1,
-          translation: 1,
-          language: 1,
-          word_name: 1,
-          id: "$_id",
-          name: "$language.name",
-          family: "$language.family",
-          macrofamily: "$language.macrofamily",
-          subfamily: "$language.subfamily",
-          abbreviation: "$language.subfamily",
-        },
+    },
+    {
+      $project: {
+        _id: 0,
+        etymology: 1,
+        gender: 1,
+        link: 1,
+        romanization: 1,
+        translation: 1,
+        language: 1,
+        word_name: 1,
+        id: "$_id",
+        name: "$language.name",
+        family: "$language.family",
+        macrofamily: "$language.macrofamily",
+        subfamily: "$language.subfamily",
+        abbreviation: "$language.subfamily",
       },
-    ]);
-    return searchResults;
-  } catch (err) {
-    return res.status(500).json({ success: false, message: "Server error" });
-  }
-
-  console.log("searchResults=", searchResults);
-
-  let resultArray = [];
-  let currentLanguages = [];
-  let mapLanguages = [];
-
-  fs.readFile(
-    path.join(__dirname, "../images/my_europe_template.svg"),
-    (err, data) => {
-      if (err) throw err;
-      let info = data.toString();
-      const $ = cheerio.load(info, {
-        normalizeWhitespace: true,
-        xmlMode: true,
-      });
-      let langs = $("tspan");
-      langs.each(function (i, el) {
-        const lang = $(el).text();
-        if (lang) {
-          mapLanguages.push(lang.split("$")[1]);
-        }
-      });
-      for (let result of searchResults) {
-        if (!mapLanguages.includes(result.language.abbreviation)) {
-          continue;
-        }
-        resultArray.push(romanizationHelper(result));
-        currentLanguages.push(result.language.abbreviation);
-      }
-
-      let unusedMapLanguages = [];
-      mapLanguages.forEach((mapLang) => {
-        if (!currentLanguages.includes(mapLang)) {
-          unusedMapLanguages.push(mapLang);
-        }
-      });
-
-      unusedMapLanguages.forEach((unusedLang) => {
-        info = info.replace("$" + unusedLang, "");
-      });
-
-      resultArray.forEach((language) => {
-        info = info.replace(
-          "$" + language["abbreviation"],
-          language["translation"]
-        );
-      });
-
-      console.log("writeFile fires");
-      fs.writeFileSync(
-        path.join(__dirname, "../images/my_europe_template_copy.svg"),
-        info,
-        function (err, result) {
-          if (err) throw err;
-          console.log("typeof result=", typeof result);
-        }
-      );
-      console.log("file saved.");
-      console.log("sendFile fires");
-      const options = {
-        headers: {
-          "Content-Type": "image/svg+xml",
-          "x-timestamp": Date.now(),
-        },
-      };
-      res.sendFile(
-        path.join(__dirname, "../images/my_europe_template_copy.svg"),
-        options,
-        (err) => {
-          if (err) {
-            console.log("Err=", err);
-          } else {
-            console.log("file sent");
-          }
-        }
-      );
-    }
-  );
-  return "FIX MY RETURN VALUE";
+    },
+  ]);
 };
+
+//   console.log("searchResults=", searchResults);
+
+//   let resultArray = [];
+//   let currentLanguages = [];
+//   let mapLanguages = [];
+
+//   fs.readFile(
+//     path.join(__dirname, "../images/my_europe_template.svg"),
+//     (err, data) => {
+//       if (err) throw err;
+//       let info = data.toString();
+//       const $ = cheerio.load(info, {
+//         normalizeWhitespace: true,
+//         xmlMode: true,
+//       });
+//       let langs = $("tspan");
+//       langs.each(function (i, el) {
+//         const lang = $(el).text();
+//         if (lang) {
+//           mapLanguages.push(lang.split("$")[1]);
+//         }
+//       });
+//       for (let result of searchResults) {
+//         if (!mapLanguages.includes(result.language.abbreviation)) {
+//           continue;
+//         }
+//         resultArray.push(romanizationHelper(result));
+//         currentLanguages.push(result.language.abbreviation);
+//       }
+
+//       let unusedMapLanguages = [];
+//       mapLanguages.forEach((mapLang) => {
+//         if (!currentLanguages.includes(mapLang)) {
+//           unusedMapLanguages.push(mapLang);
+//         }
+//       });
+
+//       unusedMapLanguages.forEach((unusedLang) => {
+//         info = info.replace("$" + unusedLang, "");
+//       });
+
+//       resultArray.forEach((language) => {
+//         info = info.replace(
+//           "$" + language["abbreviation"],
+//           language["translation"]
+//         );
+//       });
+
+//       console.log("writeFile fires");
+//       fs.writeFileSync(
+//         path.join(__dirname, "../images/my_europe_template_copy.svg"),
+//         info,
+//         function (err, result) {
+//           if (err) throw err;
+//           console.log("typeof result=", typeof result);
+//         }
+//       );
+//       console.log("file saved.");
+//       console.log("sendFile fires");
+//       const options = {
+//         headers: {
+//           "Content-Type": "image/svg+xml",
+//           "x-timestamp": Date.now(),
+//         },
+//       };
+//       res.sendFile(
+//         path.join(__dirname, "../images/my_europe_template_copy.svg"),
+//         options,
+//         (err) => {
+//           if (err) {
+//             console.log("Err=", err);
+//           } else {
+//             console.log("file sent");
+//           }
+//         }
+//       );
+//     }
+//   );
+//   return "FIX MY RETURN VALUE";
+// };
 
 // find_all_genders_by_area_img
 // GET api/v1/translations/search/all_genders_by_area_img/:area/:word
