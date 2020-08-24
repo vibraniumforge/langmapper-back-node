@@ -6,6 +6,7 @@ const path = require("path");
 const Translation = require("../../../models/Translation.js");
 const Mongoose = require("mongoose");
 const ObjectId = Mongoose.Types.ObjectId;
+const info = require("../../../info/info.js");
 
 // GET api/v1/translations
 // get all translations
@@ -30,6 +31,7 @@ router.get("/", (req, res) => {
       },
     },
     { $unwind: "$word" },
+    { $sort: { _id: 1 } },
     {
       $project: {
         _id: 0,
@@ -51,7 +53,6 @@ router.get("/", (req, res) => {
       },
     },
   ])
-    .sort({ date: 1 })
     .then((translations) => res.json(translations))
     .catch((err) => {
       console.log(err);
@@ -877,7 +878,7 @@ router.get("/search/all_translations_by_area_img/:area/:word", (req, res) => {
 // @access = public
 router.get("/search/all_genders_by_area_img/:area/:word", (req, res) => {
   console.log("\n");
-  console.log("find_all_genders_by_area_img FIRES");
+  console.log("find_all_GENDERS_by_area_img fires");
   console.log("req.params.area=", req.params.area);
   console.log("req.params.word=", req.params.word);
   //prettier-ignore
@@ -1162,7 +1163,6 @@ router.get("/search/all_genders_by_area_img/:area/:word", (req, res) => {
             }
           );
           console.log("file saved.");
-          console.log("sendFile fires");
           const options = {
             headers: {
               "Content-Type": "image/svg+xml",
@@ -1204,7 +1204,7 @@ router.get("/search/all_genders_by_area_img/:area/:word", (req, res) => {
 router.get("/search/all_etymologies_by_area_img/:area/:word", (req, res) => {
   const t1 = Date.now();
   console.log("\n");
-  console.log("all_ETYMOLOGIES_by_area_img FIRES");
+  console.log("all_etymologies_by_area_img FIRES");
   console.log("req.params.area=", req.params.area);
   console.log("req.params.word=", req.params.word);
   //prettier-ignore
@@ -1401,11 +1401,6 @@ router.get("/search/all_etymologies_by_area_img/:area/:word", (req, res) => {
           //   console.log("searchResults[0]", searchResults[0]);
 
           for (let result of searchResults) {
-            // console.log(
-            //   "result.language.abbreviation=",
-            //   result.language.abbreviation
-            // );
-
             // skip results NOT on  the current map
             if (!mapLanguages.includes(result.language.abbreviation)) {
               continue;
@@ -1418,10 +1413,13 @@ router.get("/search/all_etymologies_by_area_img/:area/:word", (req, res) => {
 
             // create a clean array from the current etymology
             let currentEtymologyArray = result.etymology
-              .replace(/\s\(.*?\)/g, "")
-              .replace(/\s\[.*?\]/g, "")
+              //   .replace(/\s\(.*?\)/g, "")
+              //   .replace(/\s\[.*?\]/g, "")
+              //   .split(".")[0]
+              //   .split(/[,\s][;\s]/);
+              .replace(/\[.*?\]|\s\[.*?\]|\(.*?\)|\s\(.*?\)/gi, "")
               .split(".")[0]
-              .split(/[,\s][;\s]/);
+              .split(/\s*[,;]\s*/);
 
             // variables to get the matching info
             let matchingFamily = null;
@@ -1447,34 +1445,37 @@ router.get("/search/all_etymologies_by_area_img/:area/:word", (req, res) => {
 
             // loop over the currentEtymologyArray and match
             currentEtymologyArray.forEach((etymology) => {
-              let cleanEtymology1 = etymology.split(" ");
+              let cleanEtymology1 = etymology.toLowerCase().split(" ");
               let cleanEtymology2 = cleanEtymology1.filter((word) => {
                 return !removeWords.includes(word.toLowerCase());
               });
               cleanEtymology = cleanEtymology2.join(" ").trim();
-
-              //   console.log("currentEtymologyArray=", currentEtymologyArray);
-              //   console.log("cleanEtymology=", cleanEtymology);
 
               // loop over the families to try to match
               for (let i = 0; i < familiesList.length; i++) {
                 const family = familiesList[i];
                 // console.log("family=", family);
                 // console.log("matched=", matched);
+
                 if (
-                  cleanEtymology.includes(`From ${family}`) ||
-                  cleanEtymology.includes(`from ${family}`)
+                  cleanEtymology
+                    .toLowerCase()
+                    .includes(`From ${family.toLowerCase()}`) ||
+                  cleanEtymology
+                    .toLowerCase()
+                    .includes(`from ${family.toLowerCase()}`)
                 ) {
                   matchingFamily = family;
                   matchingEtymology =
                     cleanEtymology.charAt(0).toUpperCase() +
                     cleanEtymology.slice(1);
                   matched = true;
-                  //   console.log("MATCH");
-                  //   console.log("matched=", matched);
-                  //   console.log("matchingFamily=", matchingFamily);
-                  //   console.log("matchingEtymology=", matchingEtymology);
-                  //   console.log("\n");
+                  // console.log("MATCH");
+                  // console.log("matched=", matched);
+                  // console.log("matchingFamily=", matchingFamily);
+                  // console.log("matchingEtymology=", matchingEtymology);
+                  // console.log("\n");
+
                   break;
                 }
                 if (matched) {
@@ -1614,7 +1615,10 @@ router.get("/search/all_etymologies_by_area_img/:area/:word", (req, res) => {
             (lang) => !mapLanguages.includes(lang)
           );
 
-          console.log("etymologyArray=", etymologyArray);
+          console.log(
+            "etymologyArray=",
+            etymologyArray.sort((a, b) => (a.family > b.family ? 1 : -1))
+          );
 
           console.log("\n");
           console.log(
@@ -1636,7 +1640,7 @@ router.get("/search/all_etymologies_by_area_img/:area/:word", (req, res) => {
           console.log(unusedSearchResults.sort());
           console.log("\n");
           console.log(
-            `${unusedMapLanguages2.length} unused search languages(in search results, but not on map`
+            `${unusedMapLanguages2.length} unused search languages(in search results, but not on map)`
           );
           if (unusedMapLanguages2.length > 0) {
             console.log(unusedMapLanguages2.sort());
@@ -1671,7 +1675,7 @@ router.get("/search/all_etymologies_by_area_img/:area/:word", (req, res) => {
               console.log("typeof result=", typeof result);
             }
           );
-          console.log("sendFile fires");
+
           const options = {
             headers: {
               "Content-Type": "image/svg+xml",
