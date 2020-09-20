@@ -164,18 +164,14 @@ router.patch("/:id", (req, res) => {
     }
   )
     .then((editedTranslation) => {
-      res.status(200).json({
+      const response = {
         message: `Translation ${req.params.id} updated.`,
         success: true,
         data: editedTranslation,
-      });
+      };
+      res.status(200).json(response);
     })
-    .then(
-      console.log({
-        message: `Translation ${req.params.id} updated.`,
-        success: true,
-      })
-    )
+    .then(console.log(message))
     .catch((err) => {
       console.log(err);
       res.status(404).json({
@@ -717,152 +713,28 @@ router.get("/search/area_europe_map/:area/:word", (req, res) => {
 // search translation by area and from the europe map by TRANSLATION
 // @access = public
 router.get("/search/all_translations_by_area_img/:area/:word", (req, res) => {
-  //   Translation.aggregate([
-  //     {
-  //       $lookup: {
-  //         from: "languages",
-  //         localField: "language",
-  //         foreignField: "name",
-  //         as: "language",
-  //       },
-  //     },
-  //     { $unwind: "$language" },
-  //     {
-  //       $lookup: {
-  //         from: "words",
-  //         localField: "word_name",
-  //         foreignField: "word_name",
-  //         as: "word",
-  //       },
-  //     },
-  //     { $unwind: "$word" },
-  //     {
-  //       $match: {
-  //         $and: [
-  //           { word_name: req.params.word },
-  //           {
-  //             $or: [
-  //               { "language.area1": req.params.area },
-  //               { "language.area2": req.params.area },
-  //               { "language.area3": req.params.area },
-  //             ],
-  //           },
-  //         ],
-  //       },
-  //     },
-  //     {
-  //       $project: {
-  //         _id: 0,
-  //         id: "$_id",
-  //         etymology: 1,
-  //         gender: 1,
-  //         link: 1,
-  //         romanization: 1,
-  //         translation: 1,
-  //         language: {
-  //           abbreviation: 1,
-  //           alphabet: 1,
-  //           macrofamily: 1,
-  //           family: 1,
-  //           subfamily: 1,
-  //           area1: 1,
-  //           area2: 1,
-  //           area3: 1,
-  //           notes: 1,
-  //           alive: 1,
-  //         },
-  //         word: {
-  //           word_name: 1,
-  //           definition: 1,
-  //         },
-  //       },
-  //     },
-  //   ])
-  Translation.findAllTranslationsByAreaImg(req.params.area, req.params.word)
-    // .then((search) => {
-    //   const searchResults = [...search];
-    //   let resultArray = [];
-    //   let currentLanguages = [];
-    //   let mapLanguages = [];
-
-    //   fs.readFile(
-    //     path.join(__dirname, "../../../images/my_europe_template.svg"),
-    //     (err, data) => {
-    //       if (err) throw err;
-    //       let info = data.toString();
-    //       const $ = cheerio.load(info, {
-    //         normalizeWhitespace: true,
-    //         xmlMode: true,
-    //       });
-    //       let langs = $("tspan");
-    //       langs.each(function (i, el) {
-    //         const lang = $(el).text();
-    //         if (lang) {
-    //           mapLanguages.push(lang.split("$")[1]);
-    //         }
-    //       });
-    //       for (let result of searchResults) {
-    //         if (!mapLanguages.includes(result.language.abbreviation)) {
-    //           continue;
-    //         }
-    //         resultArray.push(romanizationHelper(result));
-    //         currentLanguages.push(result.language.abbreviation);
-    //       }
-
-    //       let unusedMapLanguages = [];
-    //       mapLanguages.forEach((mapLang) => {
-    //         if (!currentLanguages.includes(mapLang)) {
-    //           unusedMapLanguages.push(mapLang);
-    //         }
-    //       });
-
-    //       unusedMapLanguages.forEach((unusedLang) => {
-    //         info = info.replace("$" + unusedLang, "");
-    //       });
-
-    //       resultArray.forEach((language) => {
-    //         info = info.replace(
-    //           "$" + language["abbreviation"],
-    //           language["translation"]
-    //         );
-    //       });
-
-    //       console.log("writeFile fires");
-    //       fs.writeFileSync(
-    //         path.join(__dirname, "../../../images/my_europe_template_copy.svg"),
-    //         info,
-    //         function (err, result) {
-    //           if (err) throw err;
-    //           console.log("typeof result=", typeof result);
-    //         }
-    //       );
-    //       console.log("file saved.");
-    //       console.log("sendFile fires");
-    //       const options = {
-    //         headers: {
-    //           "Content-Type": "image/svg+xml",
-    //           "x-timestamp": Date.now(),
-    //         },
-    //       };
-    //       //   res.setHeader("Content-Type", "image/svg+xml");
-    //       res.sendFile(
-    //         path.join(__dirname, "../../../images/my_europe_template_copy.svg"),
-    //         options,
-    //         (err) => {
-    //           if (err) {
-    //             console.log("Err=", err);
-    //           } else {
-    //             console.log("file sent");
-    //           }
-    //         }
-    //       );
-    //     }
-    //   );
-    // })
+  Translation.findAllTranslationsByAreaImg(
+    req.params.area,
+    req.params.word,
+    res
+  )
     // .then(() => {
-    //   res.setHeader("Content-Type", "image/svg+xml");
+    //   const options = {
+    //     headers: {
+    //       "Content-Type": "image/svg+xml",
+    //       "x-timestamp": Date.now(),
+    //     },
+    //   };
     //   res.sendFile(
-    //     path.join(__dirname, "../../../images/my_europe_template_copy.svg")
+    //     path.join(__dirname, "../../../images/my_europe_template_copy.svg"),
+    //     options,
+    //     (err) => {
+    //       if (err) {
+    //         console.log("Err=", err);
+    //       } else {
+    //         console.log("file sent");
+    //       }
+    //     }
     //   );
     // })
     .catch((err) => {
